@@ -36,6 +36,20 @@
       "when": 1732210372708,
       "tag": "0004_serious_cyclops",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1733601664256,
+      "tag": "0005_mixed_puppet_master",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1733638674935,
+      "tag": "0006_hesitant_magus",
+      "breakpoints": true
     }
   ]
 }
