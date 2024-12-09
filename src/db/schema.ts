@@ -55,3 +55,18 @@ export const attendance = pgTable("Attendance", {
     checkOutTime: time("check_out_time"),
     status: attendanceStatusEnum("status").notNull(),
 });
+
+export const leaveTypes = pgEnum('leave_types', ['casual', 'medical', 'annual'])
+export const applicationStatus = pgEnum('application_status', ['pending', 'approved', 'rejected'])
+
+export const leaveApplications = pgTable('leave_applications', {
+    leaveId: serial('leave_id').primaryKey(),
+    userId: varchar("user_id", {length : 50}).references(() => users.userId).notNull(),
+    leaveType: leaveTypes('leave_type').notNull(), // 'casual', 'medical', 'annual'
+    startDate: timestamp("start_date"),
+    endDate: timestamp("end_date"),
+    status: applicationStatus('status').default('pending').notNull(), // 'pending', 'approved', 'rejected'
+    reason: text("reason"),
+    appliedAt: timestamp("applied_at").defaultNow(),
+    approvedBy: varchar("approved_by").references(() => users.userId),
+}) 

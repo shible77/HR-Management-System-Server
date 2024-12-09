@@ -46,7 +46,7 @@ const router: Router = express.Router();
 
 /**
  * @swagger
- * /attendance:
+ * /api/attendance:
  *   get:
  *     summary: Get all attendance records
  *     tags: [Attendance]
@@ -64,7 +64,7 @@ router.get("/", getAttendance);
 
 /**
  * @swagger
- * /attendance/{id}:
+ * /api/attendance/{id}:
  *   get:
  *     summary: Get an attendance record by ID
  *     tags: [Attendance]
@@ -89,7 +89,7 @@ router.get("/:id", getAttendanceById);
 
 /**
  * @swagger
- * /attendance:
+ * /api/attendance:
  *   post:
  *     summary: Create a new attendance record
  *     tags: [Attendance]
@@ -107,7 +107,7 @@ router.post("/", createAttendance);
 
 /**
  * @swagger
- * /attendance/{id}:
+ * /api/attendance/{id}:
  *   put:
  *     summary: Update an attendance record by ID
  *     tags: [Attendance]
@@ -134,7 +134,7 @@ router.put("/:id", updateAttendance);
 
 /**
  * @swagger
- * /attendance/{id}:
+ * /api/attendance/{id}:
  *   delete:
  *     summary: Delete an attendance record by ID
  *     tags: [Attendance]
