@@ -60,7 +60,7 @@ const router: Router = express.Router();
  *               items:
  *                 $ref: '#/components/schemas/Attendance'
  */
-router.get("/", getAttendance);
+router.get("/attendance", getAttendance);
 
 /**
  * @swagger
@@ -85,7 +85,7 @@ router.get("/", getAttendance);
  *       404:
  *         description: Attendance record not found
  */
-router.get("/:id", getAttendanceById);
+router.get("/attendance/:id", getAttendanceById);
 
 /**
  * @swagger
@@ -103,7 +103,7 @@ router.get("/:id", getAttendanceById);
  *       201:
  *         description: Attendance record created successfully
  */
-router.post("/", createAttendance);
+router.post("/attendance", createAttendance);
 
 /**
  * @swagger
@@ -130,7 +130,7 @@ router.post("/", createAttendance);
  *       404:
  *         description: Attendance record not found
  */
-router.put("/:id", updateAttendance);
+router.put("/attendance/:id", updateAttendance);
 
 /**
  * @swagger
@@ -151,6 +151,6 @@ router.put("/:id", updateAttendance);
  *       404:
  *         description: Attendance record not found
  */
-router.delete("/:id", deleteAttendance);
+router.delete("/attendance/:id", deleteAttendance);
 
 export default router;

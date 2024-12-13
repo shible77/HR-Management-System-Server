@@ -30,6 +30,7 @@ import loginRouter from './routes/auth/loginRoute';
 import userRouter from './routes/user/user';
 import departmentRouter from './routes/department/department';
 import attendanceRoutes from './routes/attendanceRoutes/attendanceRoutes'
+import leaveRouter from './routes/leaveManRoutes';
 
 
 
@@ -37,7 +38,8 @@ app.use('/api', createUserRouter)
 app.use('/api', loginRouter)
 app.use('/api', userRouter)
 app.use('/api', departmentRouter)
-app.use('/attendance', attendanceRoutes)
+app.use('/api', attendanceRoutes)
+app.use('/api', leaveRouter)
 
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

@@ -14,4 +14,16 @@ export type UserFilter = {
     status?: Status;
     role?: Role;
   };
+
+  export enum LeaveType {
+    CASUAL = "casual",
+    MEDICAL = "medical",
+    ANNUAL = "annual",
+  }
+
+  export enum ApplicationStatus {
+    PENDING = "pending",
+    APPROVED = "approved",
+    REJECTED = "rejected",
+  }
   

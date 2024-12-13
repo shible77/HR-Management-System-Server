@@ -63,8 +63,9 @@ export const leaveApplications = pgTable('leave_applications', {
     leaveId: serial('leave_id').primaryKey(),
     userId: varchar("user_id", {length : 50}).references(() => users.userId).notNull(),
     leaveType: leaveTypes('leave_type').notNull(), // 'casual', 'medical', 'annual'
-    startDate: timestamp("start_date"),
-    endDate: timestamp("end_date"),
+    startDate: date("start_date"),
+    endDate: date("end_date"),
+    totalDays : integer("total_days"),
     status: applicationStatus('status').default('pending').notNull(), // 'pending', 'approved', 'rejected'
     reason: text("reason"),
     appliedAt: timestamp("applied_at").defaultNow(),
