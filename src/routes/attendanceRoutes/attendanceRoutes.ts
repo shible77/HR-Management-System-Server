@@ -1,156 +1,170 @@
-import express, { Router } from "express";
-import {
+import { Router } from "express";
+import {insertAttendanceForAllEmployees,
   getAttendance,
-  getAttendanceById,
-  createAttendance,
-  updateAttendance,
-  deleteAttendance,
-} from "../../controllers/attendanceController"; // Adjust path if necessary
+  checkIn,
+  checkOut,
+} from "../../controllers/attendanceController";
 
-const router: Router = express.Router();
+const router = Router();
+
 
 /**
  * @swagger
- * components:
- *   schemas:
- *     Attendance:
- *       type: object
- *       required:
- *         - employeeId
- *         - attendanceDate
- *         - status
- *       properties:
- *         attendanceId:
- *           type: integer
- *           description: Unique ID for the attendance record
- *         employeeId:
- *           type: integer
- *           description: Employee ID
- *         attendanceDate:
+ * /attendance/insert-all:
+ *   post:
+ *     summary: Insert attendance records for all employees
+ *     description: This endpoint inserts attendance records for all employees for the current date if they don't already exist.
+ *     tags: [Attendance]
+ *     responses:
+ *       200:
+ *         description: Attendance records inserted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Attendance records inserted for all employees
+ *       400:
+ *         description: Attendance records already exist for this date
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Attendance records already exist for this date
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server error
+ */
+router.post('/insert-all', insertAttendanceForAllEmployees);
+
+
+/**
+ * @swagger
+ * /attendance:
+ *   get:
+ *     summary: Fetch attendance records for a specific date
+ *     description: Retrieves attendance records for a given date. Defaults to today's date if no date is provided.
+ *     parameters:
+ *       - in: query
+ *         name: date
+ *         schema:
  *           type: string
  *           format: date
- *           description: Date of attendance
- *         checkInTime:
- *           type: string
- *           format: time
- *           description: Check-in time
- *         checkOutTime:
- *           type: string
- *           format: time
- *           description: Check-out time
- *         status:
- *           type: string
- *           enum: [Present, Absent, Leave]
- *           description: Attendance status
- */
-
-/**
- * @swagger
- * /api/attendance:
- *   get:
- *     summary: Get all attendance records
- *     tags: [Attendance]
+ *         required: false
+ *         description: The date for which to fetch attendance records (YYYY-MM-DD).
  *     responses:
  *       200:
- *         description: List of attendance records
+ *         description: Attendance records retrieved successfully.
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Attendance'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       attendanceId:
+ *                         type: integer
+ *                       employeeId:
+ *                         type: integer
+ *                       attendanceDate:
+ *                         type: string
+ *                         format: date
+ *                       checkInTime:
+ *                         type: string
+ *                         format: time
+ *                       checkOutTime:
+ *                         type: string
+ *                         format: time
+ *                       status:
+ *                         type: string
+ *     500:
+ *       description: Internal server error.
  */
-router.get("/attendance", getAttendance);
+router.get("/", getAttendance);
 
 /**
  * @swagger
- * /api/attendance/{id}:
- *   get:
- *     summary: Get an attendance record by ID
- *     tags: [Attendance]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *         required: true
- *         description: ID of the attendance record
- *     responses:
- *       200:
- *         description: Attendance record found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Attendance'
- *       404:
- *         description: Attendance record not found
- */
-router.get("/attendance/:id", getAttendanceById);
-
-/**
- * @swagger
- * /api/attendance:
+ * /attendance/checkin:
  *   post:
- *     summary: Create a new attendance record
- *     tags: [Attendance]
+ *     summary: Record an employee's check-in time
+ *     description: Records the check-in time for an employee for the current day.
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Attendance'
+ *             type: object
+ *             properties:
+ *               employeeId:
+ *                 type: integer
+ *                 description: The ID of the employee checking in.
+ *                 example: 1
  *     responses:
- *       201:
- *         description: Attendance record created successfully
+ *       200:
+ *         description: Check-in recorded successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       500:
+ *         description: Internal server error.
  */
-router.post("/attendance", createAttendance);
+router.post("/checkin", checkIn);
 
 /**
  * @swagger
- * /api/attendance/{id}:
- *   put:
- *     summary: Update an attendance record by ID
- *     tags: [Attendance]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *         required: true
- *         description: ID of the attendance record
+ * /attendance/checkout:
+ *   post:
+ *     summary: Record an employee's check-out time
+ *     description: Records the check-out time for an employee for the current day.
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Attendance'
+ *             type: object
+ *             properties:
+ *               employeeId:
+ *                 type: integer
+ *                 description: The ID of the employee checking out.
+ *                 example: 1
  *     responses:
  *       200:
- *         description: Attendance record updated successfully
- *       404:
- *         description: Attendance record not found
+ *         description: Check-out recorded successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       500:
+ *         description: Internal server error.
  */
-router.put("/attendance/:id", updateAttendance);
-
-/**
- * @swagger
- * /api/attendance/{id}:
- *   delete:
- *     summary: Delete an attendance record by ID
- *     tags: [Attendance]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *         required: true
- *         description: ID of the attendance record
- *     responses:
- *       200:
- *         description: Attendance record deleted successfully
- *       404:
- *         description: Attendance record not found
- */
-router.delete("/attendance/:id", deleteAttendance);
+router.post("/checkout", checkOut);
 
 export default router;
