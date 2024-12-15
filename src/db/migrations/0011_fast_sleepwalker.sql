@@ -1,0 +1,1 @@
+ALTER TABLE "leave_applications" ADD COLUMN "total_days" integer;
