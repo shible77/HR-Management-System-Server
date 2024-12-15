@@ -5,12 +5,12 @@ import {insertAttendanceForAllEmployees,
   checkOut,
 } from "../../controllers/attendanceController";
 
-const router = Router();
+const attendanceRouter = Router();
 
 
 /**
  * @swagger
- * /attendance/insert-all:
+ * /api/attendance/insert-all:
  *   post:
  *     summary: Insert attendance records for all employees
  *     description: This endpoint inserts attendance records for all employees for the current date if they don't already exist.
@@ -47,15 +47,16 @@ const router = Router();
  *                   type: string
  *                   example: Server error
  */
-router.post('/insert-all', insertAttendanceForAllEmployees);
+attendanceRouter.post('/attendance/insert-all', insertAttendanceForAllEmployees);
 
 
 /**
  * @swagger
- * /attendance:
+ * /api/attendance:
  *   get:
  *     summary: Fetch attendance records for a specific date
  *     description: Retrieves attendance records for a given date. Defaults to today's date if no date is provided.
+ *     tags: [Attendance]
  *     parameters:
  *       - in: query
  *         name: date
@@ -97,14 +98,15 @@ router.post('/insert-all', insertAttendanceForAllEmployees);
  *     500:
  *       description: Internal server error.
  */
-router.get("/", getAttendance);
+attendanceRouter.get("/attendance/", getAttendance);
 
 /**
  * @swagger
- * /attendance/checkin:
+ * /api/attendance/checkin:
  *   post:
  *     summary: Record an employee's check-in time
  *     description: Records the check-in time for an employee for the current day.
+ *     tags: [Attendance]
  *     requestBody:
  *       required: true
  *       content:
@@ -131,14 +133,15 @@ router.get("/", getAttendance);
  *       500:
  *         description: Internal server error.
  */
-router.post("/checkin", checkIn);
+attendanceRouter.post("/attendance/checkin", checkIn);
 
 /**
  * @swagger
- * /attendance/checkout:
+ * /api/attendance/checkout:
  *   post:
  *     summary: Record an employee's check-out time
  *     description: Records the check-out time for an employee for the current day.
+ *     tags: [Attendance]
  *     requestBody:
  *       required: true
  *       content:
@@ -165,6 +168,6 @@ router.post("/checkin", checkIn);
  *       500:
  *         description: Internal server error.
  */
-router.post("/checkout", checkOut);
+attendanceRouter.post("/attendance/checkout", checkOut);
 
-export default router;
+export default attendanceRouter;
