@@ -26,4 +26,11 @@ export type UserFilter = {
     APPROVED = "approved",
     REJECTED = "rejected",
   }
+
+  export type LeaveFilter = {
+    userId?: string;
+    leaveType?: LeaveType;
+    status?: ApplicationStatus;
+    departmentId? : number;
+  }
   
