@@ -6,6 +6,7 @@ import { users } from "../db/schema";
 import { v4 as uuidv4 } from "uuid";
 import { PermissionRequest, Role } from "../middlewares/checkPermission";
 const crypto = require("crypto");
+import { handleError } from "../utils/handleError";
 
 const userReqBody = z.object({
   firstName: z.string(),
@@ -56,12 +57,6 @@ export const createUser = async (req: PermissionRequest, res: Response) => {
         data: { userId: user[0].userId, employeeId: employee[0].employeeId },
       });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        name: "Invalid data type",
-        message: JSON.parse(error.message),
-      });
-    }
-    return res.status(500).json({ name: "Internal server error", error });
+    handleError(error, res)
   }
 };

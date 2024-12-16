@@ -4,6 +4,7 @@ import { departments, employees, users } from "../db/schema";
 import { z } from "zod";
 import { PermissionRequest, Role } from "../middlewares/checkPermission";
 import { eq } from "drizzle-orm";
+import { handleError } from "../utils/handleError";
 
 const departmentReqBody = z.object({
   departmentName: z.string().max(50),
@@ -33,13 +34,7 @@ export const createDepartment = async (
       departmentID: department[0].departmentId,
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        name: "Invalid Data Type",
-        message: JSON.parse(error.message),
-      });
-    }
-    return res.status(500).json({ message: "Internal Server Error", error });
+    handleError(error, res)
   }
 };
 
@@ -84,13 +79,7 @@ export const assignManager = async (req: PermissionRequest, res: Response) => {
     }
     return res.status(400).json({ status: false, message: "Invalid request" });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        name: "Invalid Data Type",
-        message: JSON.parse(error.message),
-      });
-    }
-    return res.status(500).json({ message: "Internal Server Error", error });
+    handleError(error, res)
   }
 };
 
@@ -109,12 +98,6 @@ export const assignEmployee = async (req: PermissionRequest, res: Response) => {
     await db.update(employees).set({ departmentId }).where(eq(employees.employeeId, employeeId)).execute();
     return res.status(200).json({ status: true, message: "Employee assigned successfully" });
   } catch (error) {
-    if(error instanceof z.ZodError){
-      return res.status(400).json({
-        name: "Invalid Data Type",
-        message: JSON.parse(error.message),
-      });
-    }
-    return res.status(500).json({ message: "Internal Server Error", error });
+    handleError(error, res)
   }
 };

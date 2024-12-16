@@ -9,6 +9,7 @@ import { Role } from "../middlewares/checkPermission";
 import { UserFilter } from "../types";
 import { applyUserFilters } from "../utils/userFilters";
 import { getPagingData, getPagination } from "../utils/pagination";
+import { handleError } from "../utils/handleError";
 export const getCurrentUser = async (req: SessionRequest, res: Response) => {
   try {
     const user_id = req.userID!;
@@ -37,13 +38,7 @@ export const getCurrentUser = async (req: SessionRequest, res: Response) => {
       data: user_info[0],
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        name: "Invalid Data Type",
-        message: JSON.parse(error.message),
-      });
-    }
-    return res.status(500).json({ message: "Internal server error", error });
+    handleError(error, res)
   }
 };
 
@@ -98,13 +93,7 @@ export const getUser = async (req: SessionRequest, res: Response) => {
     })
 
   }catch(error){
-    if(error instanceof z.ZodError){
-      return res.status(400).json({
-        name: "Invalid Data Type",
-        message: JSON.parse(error.message),
-      });
-    }
-    return res.status(500).json({ message: "Internal server error", error });
+    handleError(error, res)
   }
 }
 
@@ -153,13 +142,7 @@ export const getUsers = async (req: PermissionRequest, res: Response) => {
     return res.status(200).json({status : true, message : "Users fetched successfully", totalItems : totalFilteredInfo, pageSize : limit, ...response})
 
   }catch(error){
-    if(error instanceof z.ZodError){
-      return res.status(400).json({
-        name: "Invalid Data Type",
-        message: JSON.parse(error.message),
-      });
-    }
-    return res.status(500).json({ message: "Internal server error", error });
+    handleError(error, res)
   }
 
 }

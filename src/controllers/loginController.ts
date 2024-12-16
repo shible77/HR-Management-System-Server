@@ -4,6 +4,7 @@ import { db } from "../db/setup";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { handleError } from "../utils/handleError";
 
 const loginReqBody = z.object({
   email: z.string().email(),
@@ -40,14 +41,6 @@ export const loginUser = async (req: Request, res: Response) => {
       message: "Invalid email or password",
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        name: "Invalid Data Type",
-        message: JSON.parse(error.message),
-      });
-    }
-    return res
-      .status(500)
-      .json({ status: false, message: "Internal server error" });
+    handleError(error, res)
   }
 };
