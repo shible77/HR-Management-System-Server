@@ -10,6 +10,7 @@ import { PermissionRequest, Role } from "../middlewares/checkPermission";
 import { LeaveFilter, ApplicationStatus } from "../types";
 import { applyLeaveFilters } from "../utils/leaveFilters";
 import { getPagination, getPagingData } from "../utils/pagination";
+import { handleError } from "../utils/handleError";
 
 const leaveReqBody = z.object({
   leaveTypes: z.enum([LeaveType.CASUAL, LeaveType.MEDICAL, LeaveType.ANNUAL]),
@@ -43,13 +44,7 @@ export const applyLeave = async (req: SessionRequest, res: Response) => {
       leaveId: application[0].leaveId,
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        name: "Invalid Data Type",
-        message: JSON.parse(error.message),
-      });
-    }
-    return res.status(500).json({ message: "Internal Server Error", error });
+    handleError(error, res)
   }
 };
 
@@ -111,13 +106,7 @@ export const getLeave = async (req: SessionRequest, res: Response) => {
       ...response,
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        name: "Invalid Data Type",
-        message: JSON.parse(error.message),
-      });
-    }
-    return res.status(500).json({ message: "Internal Server Error", error });
+    handleError(error, res)
   }
 };
 
@@ -167,13 +156,7 @@ export const updateLeave = async (req: PermissionRequest, res: Response) => {
       leaveId: application[0].leaveId,
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        name: "Invalid Data Type",
-        message: JSON.parse(error.message),
-      });
-    }
-    return res.status(500).json({ message: "Internal Server Error", error });
+    handleError(error, res)
   }
 };
 
@@ -235,13 +218,7 @@ export const processLeaveRequest = async (
         message: "You are not authorized to process this leave application",
       });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        name: "Invalid Data Type",
-        message: JSON.parse(error.message),
-      });
-    }
-    return res.status(500).json({ message: "Internal Server Error", error });
+    handleError(error, res)
   }
 };
 
@@ -276,13 +253,7 @@ export const deleteLeave = async (req: PermissionRequest, res: Response) => {
         message: "You are not authorized to delete this leave application",
       });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        name: "Invalid Data Type",
-        message: JSON.parse(error.message),
-      });
-    }
-    return res.status(500).json({ message: "Internal Server Error", error });
+    handleError(error, res)
   }
 };
 
@@ -328,8 +299,8 @@ export const getOnLeave = async (req: PermissionRequest, res: Response) => {
       .leftJoin(employees, eq(users.userId, employees.userId))
       .where(and(
         eq(leaveApplications.status, ApplicationStatus.APPROVED),
-        gte(leaveApplications.startDate, today),
-        lte(leaveApplications.endDate, today),
+        lte(leaveApplications.startDate, today),
+        gte(leaveApplications.endDate, today),
         eq(employees.departmentId, Number(departmentId))
       ))
       .execute();
@@ -340,12 +311,6 @@ export const getOnLeave = async (req: PermissionRequest, res: Response) => {
       });
     }
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        name: "Invalid Data Type",
-        message: JSON.parse(error.message),
-      });
-    }
-    return res.status(500).json({ message: "Internal Server Error", error });
+    handleError(error, res)
   }
 };
