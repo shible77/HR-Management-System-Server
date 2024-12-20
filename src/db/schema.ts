@@ -1,4 +1,4 @@
-import { integer, varchar, pgTable, serial, date, time, text, timestamp, pgEnum } from 'drizzle-orm/pg-core';
+import { integer, varchar, pgTable, serial, date, time, text, timestamp, pgEnum, boolean } from 'drizzle-orm/pg-core';
 
 export const rolesEnum = pgEnum('role', ['admin', 'manager', 'employee']);
 export const users = pgTable('users', {
@@ -70,4 +70,12 @@ export const leaveApplications = pgTable('leave_applications', {
     reason: text("reason"),
     appliedAt: timestamp("applied_at").defaultNow(),
     approvedBy: varchar("approved_by").references(() => users.userId),
+}) 
+
+export const passwordResetTokens = pgTable('password_reset_tokens', {
+    tokenId : serial('token_id').primaryKey(),
+    token : varchar('token', {length : 50}).notNull(),
+    userId : varchar('user_id', {length : 50}).references(() => users.userId).notNull(),
+    createdAt : timestamp('created_at').defaultNow().notNull(),
+    isUsed : boolean('is_used').default(false).notNull()
 }) 
