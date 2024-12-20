@@ -9,15 +9,23 @@ const dashboardRouter = express.Router()
  * @swagger
  * /api/dashboardInfo:
  *   get:
- *     summary: Get summary information for the admin dashboard
- *     description: Retrieve various counts and statistics required for the admin dashboard, such as total users, active employees, and leave requests.
+ *     summary: Fetch dashboard information
+ *     description: Fetches aggregated information for the dashboard. The data returned depends on the role of the requester (ADMIN or MANAGER).
  *     tags:
  *       - Dashboard
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: departmentId
+ *         required: false
+ *         description: ID of the department (required for MANAGER role).
+ *         schema:
+ *           type: integer
+ *           example: 5
  *     responses:
  *       200:
- *         description: Successfully retrieved dashboard information
+ *         description: Aggregated dashboard data successfully fetched.
  *         content:
  *           application/json:
  *             schema:
@@ -37,21 +45,30 @@ const dashboardRouter = express.Router()
  *                   example: 10
  *                 totalEmployees:
  *                   type: integer
- *                   example: 95
+ *                   example: 80
  *                 activeEmployees:
  *                   type: integer
- *                   example: 90
+ *                   example: 75
  *                 totalAttendedEmployeesToday:
  *                   type: integer
- *                   example: 85
+ *                   example: 70
  *                 totalPendingLeaveRequest:
  *                   type: integer
  *                   example: 5
  *                 totalOnLeaveEmployeesToday:
  *                   type: integer
  *                   example: 3
+ *                 departmentName:
+ *                   type: string
+ *                   example: "Sales"
+ *                 totalEmployeesInDept:
+ *                   type: integer
+ *                   example: 20
+ *                 totalActiveEmployeesInDept:
+ *                   type: integer
+ *                   example: 18
  *       403:
- *         description: Unauthorized access to the resource
+ *         description: User lacks the necessary permissions to access this resource.
  *         content:
  *           application/json:
  *             schema:
@@ -63,21 +80,8 @@ const dashboardRouter = express.Router()
  *                 message:
  *                   type: string
  *                   example: "You don't have permission to perform this action"
- *       400:
- *         description: Validation error due to invalid or missing data
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 name:
- *                   type: string
- *                   example: "Invalid Data Type"
- *                 message:
- *                   type: string
- *                   example: "[{\"path\":[\"param\"],\"message\":\"Expected number, received string\"}]"
  *       500:
- *         description: Internal server error
+ *         description: Internal server error occurred.
  *         content:
  *           application/json:
  *             schema:

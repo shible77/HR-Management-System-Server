@@ -32,6 +32,7 @@ import departmentRouter from './routes/department/department';
 import attendanceRouter from './routes/attendanceRoutes/attendanceRoutes'
 import leaveRouter from './routes/leaveManRoutes';
 import dashboardRouter from './routes/DashBoardAPIRoutes';
+import forgotPasswordRouter from './routes/forgotPasswordRoutes';
 
 
 app.use('/api', createUserRouter)
@@ -41,6 +42,7 @@ app.use('/api', departmentRouter)
 app.use('/api', attendanceRouter)
 app.use('/api', leaveRouter)
 app.use('/api', dashboardRouter)
+app.use('/api', forgotPasswordRouter)
 
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
