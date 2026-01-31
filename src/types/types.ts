@@ -1,5 +1,5 @@
 // Define filter types for user queries
-import { Role } from "./middlewares/checkPermission";
+import { Role } from "../middlewares/checkPermission";
 export enum Status {
     ACTIVE = "active",
     INACTIVE = "inactive",

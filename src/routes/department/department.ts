@@ -1,7 +1,7 @@
 import express from 'express'
 import { verifySession } from '../../middlewares/verifySession'
 import { checkPermission } from '../../middlewares/checkPermission'
-import { assignEmployee, assignManager, createDepartment } from '../../controllers/departmentController'
+import { assignEmployee, assignManager, createDepartment } from '../../controllers/department.controllers/departmentController'
 
 const departmentRouter = express.Router()
 

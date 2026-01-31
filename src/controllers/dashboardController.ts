@@ -11,7 +11,7 @@ import {
 import { eq, and, sql, ne, lte, gte } from "drizzle-orm";
 import { handleError } from "../utils/handleError";
 import { z } from "zod";
-import { ApplicationStatus, Status } from "../types";
+import { ApplicationStatus, Status } from "../types/types";
 
 const getDashboardInfoSchema = z.object({
   departmentId: z.coerce.number().optional(),

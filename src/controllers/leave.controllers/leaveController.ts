@@ -1,16 +1,16 @@
 import { Response } from "express";
-import { db } from "../db/setup";
-import { leaveApplications, users, employees, departments } from "../db/schema";
+import { db } from "../../db/setup";
+import { leaveApplications, users, employees, departments } from "../../db/schema";
 import { eq, and, asc, desc, sql, gte, lte } from "drizzle-orm";
 import { z } from "zod";
-import { LeaveType } from "../types";
-import { SessionRequest } from "../middlewares/verifySession";
-import { getDateDiff } from "../utils/getDateDiff";
-import { PermissionRequest, Role } from "../middlewares/checkPermission";
-import { LeaveFilter, ApplicationStatus } from "../types";
-import { applyLeaveFilters } from "../utils/leaveFilters";
-import { getPagination, getPagingData } from "../utils/pagination";
-import { handleError } from "../utils/handleError";
+import { LeaveType } from "../../types/types";
+import { SessionRequest } from "../../middlewares/verifySession";
+import { getDateDiff } from "../../utils/getDateDiff";
+import { PermissionRequest, Role } from "../../middlewares/checkPermission";
+import { LeaveFilter, ApplicationStatus } from "../../types/types";
+import { applyLeaveFilters } from "../../utils/leaveFilters";
+import { getPagination, getPagingData } from "../../utils/pagination";
+import { handleError } from "../../utils/handleError";
 
 const leaveReqBody = z.object({
   leaveTypes: z.enum([LeaveType.CASUAL, LeaveType.MEDICAL, LeaveType.ANNUAL]),

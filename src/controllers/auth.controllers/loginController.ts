@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
-import { users, userTokens } from "../db/schema";
-import { db } from "../db/setup";
+import { users, userTokens } from "../../db/schema";
+import { db } from "../../db/setup";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
-import { handleError } from "../utils/handleError";
+import { handleError } from "../../utils/handleError";
 
 const loginReqBody = z.object({
   email: z.string().email(),

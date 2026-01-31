@@ -1,10 +1,10 @@
 import { Response } from "express";
-import { db } from "../db/setup";
-import { departments, employees, users } from "../db/schema";
+import { db } from "../../db/setup";
+import { departments, employees, users } from "../../db/schema";
 import { z } from "zod";
-import { PermissionRequest, Role } from "../middlewares/checkPermission";
+import { PermissionRequest, Role } from "../../middlewares/checkPermission";
 import { eq } from "drizzle-orm";
-import { handleError } from "../utils/handleError";
+import { handleError } from "../../utils/handleError";
 
 const departmentReqBody = z.object({
   departmentName: z.string().max(50),

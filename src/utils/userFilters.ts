@@ -1,6 +1,6 @@
 import { eq, and } from "drizzle-orm";
 import { departments, employees, users } from "../db/schema";
-import { UserFilter } from "../types";
+import { UserFilter } from "../types/types";
 
 export function applyUserFilters(query: any, filters: UserFilter) {
   const conditions: any[] = [];

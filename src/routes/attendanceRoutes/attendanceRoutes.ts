@@ -3,7 +3,7 @@ import {insertAttendanceForAllEmployees,
   getAttendance,
   checkIn,
   checkOut,
-} from "../../controllers/attendanceController";
+} from "../../controllers/attendance.controllers/attendanceController";
 
 const attendanceRouter = Router();
 

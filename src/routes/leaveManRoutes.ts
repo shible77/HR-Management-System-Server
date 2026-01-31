@@ -1,7 +1,7 @@
 import express , { Response } from 'express';
 import { verifySession } from '../middlewares/verifySession';
 import { checkPermission } from '../middlewares/checkPermission';
-import { applyLeave, deleteLeave, getLeave, getOnLeave, processLeaveRequest, updateLeave } from '../controllers/leaveController';
+import { applyLeave, deleteLeave, getLeave, getOnLeave, processLeaveRequest, updateLeave } from '../controllers/leave.controllers/leaveController';
 
 const leaveRouter = express.Router();
 

@@ -1,12 +1,12 @@
-import { employees } from "../db/schema";
+import { employees } from "../../db/schema";
 import { Request, Response } from "express";
 import { z } from "zod";
-import { db } from "../db/setup";
-import { users } from "../db/schema";
+import { db } from "../../db/setup";
+import { users } from "../../db/schema";
 import { v4 as uuidv4 } from "uuid";
-import { PermissionRequest, Role } from "../middlewares/checkPermission";
+import { PermissionRequest, Role } from "../../middlewares/checkPermission";
 const crypto = require("crypto");
-import { handleError } from "../utils/handleError";
+import { handleError } from "../../utils/handleError";
 
 const userReqBody = z.object({
   firstName: z.string(),

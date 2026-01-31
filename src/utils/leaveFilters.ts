@@ -1,6 +1,6 @@
 import { eq, and } from "drizzle-orm";
 import { leaveApplications, employees } from "../db/schema";
-import { LeaveFilter, UserFilter } from "../types";
+import { LeaveFilter, UserFilter } from "../types/types";
 
 export function applyLeaveFilters(query: any, filters: LeaveFilter) {
   const conditions: any[] = [];

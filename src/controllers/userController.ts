@@ -6,7 +6,7 @@ import { Response } from "express";
 import { z } from "zod";
 import { PermissionRequest } from "../middlewares/checkPermission";
 import { Role } from "../middlewares/checkPermission";
-import { UserFilter } from "../types";
+import { UserFilter } from "../types/types";
 import { applyUserFilters } from "../utils/userFilters";
 import { getPagingData, getPagination } from "../utils/pagination";
 import { handleError } from "../utils/handleError";

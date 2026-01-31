@@ -8,6 +8,7 @@ dotenv.config();
 const port = process.env.PORT || 5000
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './swagger';
+import { errorHandler } from './middlewares/error.middleware';
 
 app.use(cors({
   origin: 'http://localhost:5173', // Front-end URL
@@ -15,13 +16,8 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.use(errorHandler);
 
-app.use((err: SyntaxError, req: Request, res: Response, next: NextFunction) => {
-  if (err instanceof SyntaxError && 'body' in err) {
-    return res.status(400).json({ error: 'Invalid Request Body', message: err.message });
-  }
-  next(err); // Pass other errors to the default error handler
-});
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
@@ -43,11 +39,6 @@ app.use('/api', attendanceRouter)
 app.use('/api', leaveRouter)
 app.use('/api', dashboardRouter)
 app.use('/api', forgotPasswordRouter)
-
-
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  res.status(500).json({ error: 'Internal Server Error' });
-});
 
 app.listen(port, () => {
   console.log("The app is running on : http://localhost:" + port)

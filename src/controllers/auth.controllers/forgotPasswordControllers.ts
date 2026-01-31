@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { handleError } from "../utils/handleError";
-import { db } from "../db/setup";
-import { users, passwordResetTokens } from "../db/schema";
-import { sendVerificationEmail } from "../utils/mailService";
+import { handleError } from "../../utils/handleError";
+import { db } from "../../db/setup";
+import { users, passwordResetTokens } from "../../db/schema";
+import { sendVerificationEmail } from "../../services/mailService";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 const crypto = require("crypto");

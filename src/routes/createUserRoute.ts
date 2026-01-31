@@ -1,5 +1,5 @@
 import express from 'express'
-import { createUser } from '../controllers/createUserController'
+import { createUser } from '../controllers/auth.controllers/createUserController'
 import { verifySession } from '../middlewares/verifySession'
 import { checkPermission } from '../middlewares/checkPermission'
 const createUserRouter = express.Router()
