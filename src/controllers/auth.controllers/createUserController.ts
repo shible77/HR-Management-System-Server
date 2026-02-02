@@ -3,10 +3,10 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { db } from "../../db/setup";
 import { users } from "../../db/schema";
-import { v4 as uuidv4 } from "uuid";
-import { PermissionRequest, Role } from "../../middlewares/checkPermission";
+import { v7 as uuidv7 } from "uuid";
+import { Role } from "../../middlewares/checkPermission";
+import { SessionRequest } from "../../middlewares/verifySession";
 const crypto = require("crypto");
-import { handleError } from "../../utils/handleError";
 
 const userReqBody = z.object({
   firstName: z.string(),
@@ -17,7 +17,7 @@ const userReqBody = z.object({
   password: z.string(),
   role: z.enum(["admin", "manager", "employee"]),
 });
-export const createUser = async (req: PermissionRequest, res: Response) => {
+export const createUser = async (req: SessionRequest, res: Response) => {
   try {
     if (req.role !== Role.ADMIN) {
       return res
@@ -26,10 +26,11 @@ export const createUser = async (req: PermissionRequest, res: Response) => {
     }
     const { firstName, lastName, phone, username, email, password, role } =
       userReqBody.parse(req.body);
+    const userId = uuidv7();
     const user = await db
       .insert(users)
       .values({
-        userId: uuidv4(),
+        userId: userId,
         firstName,
         lastName,
         phone,
@@ -56,7 +57,7 @@ export const createUser = async (req: PermissionRequest, res: Response) => {
         message: "User created successfully",
         data: { userId: user[0].userId, employeeId: employee[0].employeeId },
       });
-  } catch (error) {
-    handleError(error, res)
+  } catch{
+    throw new Error("server error")
   }
 };

@@ -1,9 +1,8 @@
-import { Table } from 'drizzle-orm';
-import { integer, varchar, pgTable, serial, date, time, text, timestamp, pgEnum, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { integer, uuid, varchar, pgTable, serial, date, time, text, timestamp, pgEnum, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const rolesEnum = pgEnum('role', ['admin', 'manager', 'employee']);
 export const users = pgTable('users', {
-    userId: varchar('user_id', { length: 50 }).primaryKey(),
+    userId: uuid("user_id").primaryKey(),
     firstName: varchar('first_name', { length: 50 }).notNull(),
     lastName: varchar('last_name', { length: 50 }).notNull(),
     phone: varchar('phone', { length: 11 }),
@@ -15,7 +14,7 @@ export const users = pgTable('users', {
     (table) => ({
         usernameIdx: uniqueIndex('users_username_idx').on(table.username),
         emailIdx: uniqueIndex('users_email_idx').on(table.email),
-        roleIdx: index('users_role_idx').on(table.role),
+        roleIDIdx: index('users_role_id_idx').on(table.role, table.userId),
     })
 );
 
@@ -25,7 +24,7 @@ export const employees = pgTable('employees', {
     designation: varchar('designation', { length: 50 }),
     hireDate: date('hire_date'),
     status: statusEnum('status').default('active').notNull(),
-    userId: varchar('user_id', { length: 50 })
+    userId: uuid('user_id')
         .references(() => users.userId, { onDelete: 'cascade' })
         .notNull(),
     departmentId: integer('department_id')
@@ -42,7 +41,7 @@ export const employees = pgTable('employees', {
 export const departments = pgTable('departments', {
     departmentId: serial('department_id').primaryKey(),
     departmentName: varchar('department_name', { length: 50 }).notNull(),
-    managerId: varchar('manager_id', { length: 50 })
+    managerId: uuid('manager_id')
         .references(() => users.userId, { onDelete: 'set null' }),
     description: text('description'),
 },
@@ -59,18 +58,12 @@ export const addresses = pgTable('addresses', {
     district: varchar('district', { length: 50 }).notNull(),
     thana: varchar('thana', { length: 50 }).notNull(),
     postCode: varchar('post_code', { length: 10 }).notNull(),
-    userId: varchar('user_id', { length: 50 }).references(() => users.userId, { onDelete: 'cascade' })   
+    userId: uuid('user_id').references(() => users.userId, { onDelete: 'cascade' })   
 },
     (table) => ({
         userIdx: index('addresses_user_idx').on(table.userId),
     })
 )
-
-export const userTokens = pgTable('user_tokens', {
-    token: varchar('token', { length: 50 }).primaryKey(),
-    userId: varchar('user_id', { length: 50 }).references(() => users.userId, { onDelete: 'cascade' }),
-    createdAt: timestamp('created_at').defaultNow().notNull()
-})
 
 export const attendanceStatusEnum = pgEnum("Attendance_status_enum", ["Present", "Absent", "Leave"]);
 
@@ -89,6 +82,8 @@ export const attendance = pgTable('attendance', {
         employeeDateIdx: uniqueIndex('attendance_emp_date_idx')
             .on(table.employeeId, table.attendanceDate),
         statusIdx: index('attendance_status_idx').on(table.status),
+        dateEmployeeIdx: index('attendance_date_emp_idx')
+            .on(table.employeeId, table.attendanceDate),
     })
 );
 
@@ -98,7 +93,7 @@ export const applicationStatus = pgEnum('application_status', ['pending', 'appro
 
 export const leaveApplications = pgTable('leave_applications', {
     leaveId: serial('leave_id').primaryKey(),
-    userId: varchar('user_id', { length: 50 })
+    userId: uuid('user_id')
         .references(() => users.userId)
         .notNull(),
     leaveType: leaveTypes('leave_type').notNull(),
@@ -108,12 +103,15 @@ export const leaveApplications = pgTable('leave_applications', {
     status: applicationStatus('status').default('pending').notNull(),
     reason: text('reason'),
     appliedAt: timestamp('applied_at').defaultNow(),
-    approvedBy: varchar('approved_by').references(() => users.userId),
+    approvedBy: uuid('approved_by').references(() => users.userId),
 },
     (table) => ({
         userIdx: index('leave_user_idx').on(table.userId),
         statusIdx: index('leave_status_idx').on(table.status),
         approverIdx: index('leave_approved_by_idx').on(table.approvedBy),
+
+        activeLeaveIdx: index('leave_active_idx').on(table.status, table.startDate, table.endDate, table.userId),
+        pendingLeaveIdx: index('leave_pending_user_idx').on(table.status, table.userId),
     })
 );
 
@@ -141,7 +139,7 @@ export const performanceReviews = pgTable('performance_reviews', {
     employeeId: integer('employee_id')
         .references(() => employees.employeeId, { onDelete: 'cascade' })
         .notNull(),
-    reviewerId: varchar('reviewer_id')
+    reviewerId: uuid('reviewer_id')
         .references(() => users.userId)
         .notNull(),
     reviewDate: date('review_date').notNull(),
@@ -160,7 +158,7 @@ export const performanceReviews = pgTable('performance_reviews', {
 export const passwordResetTokens = pgTable('password_reset_tokens', {
     tokenId: serial('token_id').primaryKey(),
     token: varchar('token', { length: 50 }).notNull(),
-    userId: varchar('user_id', { length: 50 }).references(() => users.userId).notNull(),
+    userId: uuid('user_id').references(() => users.userId).notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     isUsed: boolean('is_used').default(false).notNull()
 }) 

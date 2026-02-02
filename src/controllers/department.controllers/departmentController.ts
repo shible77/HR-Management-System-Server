@@ -2,16 +2,17 @@ import { Response } from "express";
 import { db } from "../../db/setup";
 import { departments, employees, users } from "../../db/schema";
 import { z } from "zod";
-import { PermissionRequest, Role } from "../../middlewares/checkPermission";
+import { Role } from "../../middlewares/checkPermission";
 import { eq } from "drizzle-orm";
 import { handleError } from "../../utils/handleError";
+import { SessionRequest } from "../../middlewares/verifySession";
 
 const departmentReqBody = z.object({
   departmentName: z.string().max(50),
   description: z.string(),
 });
 export const createDepartment = async (
-  req: PermissionRequest,
+  req: SessionRequest,
   res: Response
 ) => {
   try {
@@ -41,7 +42,7 @@ export const createDepartment = async (
 const assignManagerReqBody = z.object({
   userId: z.string().max(50),
 });
-export const assignManager = async (req: PermissionRequest, res: Response) => {
+export const assignManager = async (req: SessionRequest, res: Response) => {
   try {
     if (req.role !== Role.ADMIN) {
       return res
@@ -86,7 +87,7 @@ export const assignManager = async (req: PermissionRequest, res: Response) => {
 const assignEmployeeReqBody = z.object({
   departmentId : z.number()
 })
-export const assignEmployee = async (req: PermissionRequest, res: Response) => {
+export const assignEmployee = async (req: SessionRequest, res: Response) => {
   try {
     if (req.role! === Role.EMPLOYEE) {
       return res

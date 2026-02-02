@@ -1,42 +1,20 @@
 import { Request, Response, NextFunction } from "express";
-import { userTokens, users } from "../db/schema";
-import { db } from "../db/setup";
-import { eq } from "drizzle-orm";
+import { verifyToken } from "../config/jwt";
+import { JwtPayload } from "../config/jwt";
 
 export interface SessionRequest extends Request {
   userID?: string;
-  userToken?: string;
+  role?: string;
 }
-export const verifySession = async (
-  req: SessionRequest,
-  res: Response,
-  next: NextFunction
-) => {
-  const header = req.header("Authorization");
-  if (!header) {
-    return res
-      .status(401)
-      .json({ status: false, message: "Unauthorized Request" });
-  }
-  const token = header.split(" ")[1];
+export const verifySession = async (req: SessionRequest, res: Response, next: NextFunction) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({status:false, message: "UNAUTHORIZED" });
   try {
-    const tokenData = await db
-      .select()
-      .from(userTokens)
-      .where(eq(userTokens.token, token))
-      .execute();
-    if (tokenData.length === 0) {
-      return res.status(401).json({ status: false, message: "Invalid Token" });
-    }
-    const { createdAt } = tokenData[0]
-    if((Date.now()+21600000) - createdAt.getTime() > 1000 * 60 * 60 * 24 * 7){
-      await db.delete(userTokens).where(eq(userTokens.token, token)).execute();
-      return res.status(401).json({ Message: "Session Expires, log in again" });
-    }
-    req.userToken = tokenData[0].token;
-    req.userID = tokenData[0].userId!;
+    const payload = verifyToken(token) as JwtPayload;
+    req.userID=payload.userId;
+    req.role=payload.role;
     next();
-  } catch (error) {
-    return res.status(500).json({ message : 'Internal server error', error });
+  } catch {
+    throw new Error("Invalid or expired token");
   }
 };

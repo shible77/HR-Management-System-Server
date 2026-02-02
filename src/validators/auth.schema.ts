@@ -10,7 +10,7 @@ export const createUserBody = z.object({
   role: z.enum(["admin", "manager", "employee"]),
 });
 
-export const loginBody = z.object({
+export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string(),
 });

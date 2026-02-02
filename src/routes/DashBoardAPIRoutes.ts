@@ -1,6 +1,6 @@
 import express from 'express'
 import { verifySession } from './../middlewares/verifySession';
-import { checkPermission } from '../middlewares/checkPermission';
+import { checkPermission, Role } from '../middlewares/checkPermission';
 import { getDashboardInfo } from '../controllers/dashboardController';
 
 const dashboardRouter = express.Router()
@@ -93,7 +93,7 @@ const dashboardRouter = express.Router()
  *                 error:
  *                   type: object
  */
-dashboardRouter.get('/dashboardInfo', verifySession, checkPermission, getDashboardInfo)
+dashboardRouter.get('/dashboardInfo', verifySession, checkPermission([Role.ADMIN, Role.MANAGER]), getDashboardInfo)
 
 
 export default dashboardRouter

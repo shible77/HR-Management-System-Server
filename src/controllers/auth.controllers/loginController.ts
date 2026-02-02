@@ -1,30 +1,23 @@
 import { Request, Response } from "express";
-import { users, userTokens } from "../../db/schema";
+import { users } from "../../db/schema";
 import { db } from "../../db/setup";
-import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { v4 as uuidv4 } from "uuid";
-import { handleError } from "../../utils/handleError";
-
-const loginReqBody = z.object({
-  email: z.string().email(),
-  password: z.string(),
-});
+import { validate } from "../../utils/validate";
+import { loginSchema } from "../../validators/auth.schema";
+import { generateToken } from "../../config/jwt";
 
 export const loginUser = async (req: Request, res: Response) => {
   try {
-    const { email, password } = loginReqBody.parse(req.body);
+    const { email, password } = validate(loginSchema, req.body);
     const user = await db
       .select()
       .from(users)
       .where(eq(users.email, email))
       .execute();
+
     if (user.length > 0 && user[0].password === password) {
-      const userToken = await db
-        .insert(userTokens)
-        .values({ token: uuidv4(), userId: user[0].userId })
-        .returning({ token: userTokens.token });
-      res.cookie("token", userToken[0].token, {
+      const userToken = generateToken({userId: user[0].userId, role: user[0].role})
+      res.cookie("token", userToken, {
         httpOnly: false, // Prevents client-side JavaScript from accessing the cookie
         secure: false, //process.env.NODE_ENV === 'production',      // Ensures the cookie is only sent over HTTPS
         sameSite: "lax", // Helps prevent CSRF attacks
@@ -32,7 +25,7 @@ export const loginUser = async (req: Request, res: Response) => {
       return res.status(200).json({
         status: true,
         message: "Login successful",
-        token: userToken[0].token,
+        token: userToken,
         role: user[0].role
       });
     }
@@ -41,6 +34,6 @@ export const loginUser = async (req: Request, res: Response) => {
       message: "Invalid email or password",
     });
   } catch (error) {
-    handleError(error, res)
+    throw new Error("Login failed");
   }
 };

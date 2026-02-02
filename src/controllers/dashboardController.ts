@@ -1,186 +1,145 @@
-import { PermissionRequest, Role } from "./../middlewares/checkPermission";
+import { SessionRequest } from "../middlewares/verifySession";
 import { Response } from "express";
 import { db } from "../db/setup";
-import {
-  employees,
-  users,
-  departments,
-  leaveApplications,
-  attendance,
-} from "../db/schema";
-import { eq, and, sql, ne, lte, gte } from "drizzle-orm";
-import { handleError } from "../utils/handleError";
+import { departments } from "../db/schema";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { ApplicationStatus, Status } from "../types/types";
+
+import { validate } from "../utils/validate";
+import { getManagerDashboardInfoSchema } from "../validators/dashboard.schema";
+
+export interface userStatesType {
+  totalUsers: number;
+  totalEmployees: number;
+  activeEmployees: number;
+}
+
+export interface attendanceStatsType {
+  totalAttendedToday: number;
+  totalPendingLeave: number;
+  totalOnLeaveToday: number;
+}
 
 const getDashboardInfoSchema = z.object({
   departmentId: z.coerce.number().optional(),
 });
-export const getDashboardInfo = async (
-  req: PermissionRequest,
-  res: Response
-) => {
+export const getAdminDashboardInfo = async (req: SessionRequest, res: Response) => {
   try {
-    const today = new Date().toISOString().split("T")[0];
-    if (req.role! === Role.ADMIN) {
-      const totalUsers = await db.$count(users);
-      const totalDepartments = await db.$count(departments);
-      const totalEmployees = await db.$count(users, ne(users.role, Role.ADMIN));
-      const activeEmployeesQuery = db
-        .select()
-        .from(users)
-        .innerJoin(employees, eq(users.userId, employees.userId))
-        .where(
-          and(eq(employees.status, Status.ACTIVE), ne(users.role, Role.ADMIN))
-        );
-      const activeEmployees = await db.$count(activeEmployeesQuery);
-      const attendanceQuery = db
-        .select()
-        .from(attendance)
-        .where(eq(attendance.attendanceDate, today));
-      const totalAttendedEmployeesToday = await db.$count(attendanceQuery);
-      const totalPendingLeaveRequest = await db.$count(
-        leaveApplications,
-        eq(leaveApplications.status, ApplicationStatus.PENDING)
-      );
 
-      const totalOnLeaveEmployeesTodayQuery = db
-        .select()
-        .from(leaveApplications)
-        .where(
-          and(
-            eq(leaveApplications.status, ApplicationStatus.APPROVED),
-            lte(leaveApplications.startDate, today),
-            gte(leaveApplications.endDate, today)
-          )
-        );
-      const totalOnLeaveEmployeesToday = await db.$count(
-        totalOnLeaveEmployeesTodayQuery
-      );
-      return res.status(200).json({
-        status: true,
-        message: "Count of some fields for Dashboard fetched successfully",
-        totalUsers,
-        totalDepartments,
-        totalEmployees,
-        activeEmployees,
-        totalAttendedEmployeesToday,
-        totalPendingLeaveRequest,
-        totalOnLeaveEmployeesToday,
-      });
-    }
-    if (req.role! === Role.MANAGER) {
-      const userId = req.userID!;
-      const departmentId = Number(
-        getDashboardInfoSchema.parse(req.query).departmentId
-      );
-      const matchingManager = await db
-        .select()
-        .from(departments)
-        .where(eq(departments.departmentId, departmentId));
-      if (
-        matchingManager.length < 1 ||
-        matchingManager[0].managerId !== userId
-      ) {
-        return res.status(403).json({
-          message: "You don't have permission to perform this action",
-        });
+    const userStats: userStatesType = await db.execute(sql`
+    SELECT
+      COUNT(*)                                   AS "totalUsers",
+      COUNT(*) FILTER (WHERE u.role != 'admin') AS "totalEmployees",
+      COUNT(*) FILTER (
+        WHERE e.status = 'active' 
+          AND u.role != 'admin'
+      )                                          AS "activeEmployees"
+    FROM users u
+    JOIN employees e ON u.user_id = e.user_id
+  `) as any;
+
+    const attendanceStats: attendanceStatsType = await db.execute(sql`
+    SELECT
+      COUNT(*) FILTER (
+        WHERE a.attendance_date = CURRENT_DATE
+      ) AS "totalAttendedToday",
+
+      COUNT(*) FILTER (
+        WHERE la.status = 'pending'
+      ) AS "totalPendingLeave",
+
+      COUNT(*) FILTER (
+        WHERE la.status = 'approved'
+          AND CURRENT_DATE BETWEEN la.start_date AND la.end_date
+      ) AS "totalOnLeaveToday"
+    FROM leave_applications la
+    LEFT JOIN attendance a ON a.employee_id = la.employee_id
+  `) as any;
+
+    return res.status(200).json({
+      status: true,
+      message: "Count of some fields for Dashboard fetched successfully",
+      data: {
+        userStats: userStats.totalUsers,
+        totalEmployees: userStats.totalEmployees,
+        activeEmployees: userStats.activeEmployees,
+        totalAttendedToday: attendanceStats.totalAttendedToday,
+        totalPendingLeave: attendanceStats.totalPendingLeave,
+        totalOnLeaveToday: attendanceStats.totalOnLeaveToday,
       }
-      const totalEmployeesInDeptQuery = db
-        .select()
-        .from(users)
-        .innerJoin(employees, eq(users.userId, employees.userId))
-        .where(
-          and(
-            eq(employees.departmentId, departmentId),
-            eq(users.role, Role.EMPLOYEE)
-          )
-        );
-      const totalEmployeesInDept = await db.$count(totalEmployeesInDeptQuery);
-      const totalActiveEmployeesInDeptQuery = db
-        .select()
-        .from(users)
-        .innerJoin(employees, eq(users.userId, employees.userId))
-        .where(
-          and(
-            eq(employees.departmentId, departmentId),
-            eq(users.role, Role.EMPLOYEE),
-            eq(employees.status, Status.ACTIVE)
-          )
-        );
-      const totalActiveEmployeesInDept = await db.$count(
-        totalActiveEmployeesInDeptQuery
-      );
-      const totalAttendedEmployeesTodayQuery = db
-        .select()
-        .from(users)
-        .innerJoin(employees, eq(users.userId, employees.userId))
-        .leftJoin(attendance, eq(employees.employeeId, attendance.employeeId))
-        .where(
-          and(
-            eq(attendance.attendanceDate, today),
-            eq(employees.departmentId, departmentId)
-          )
-        );
-      const totalAttendedEmployeesToday = await db.$count(
-        totalAttendedEmployeesTodayQuery
-      );
-      const totalPendingLeaveRequestQuery = db
-        .select()
-        .from(users)
-        .innerJoin(employees, eq(users.userId, employees.userId))
-        .leftJoin(
-          leaveApplications,
-          eq(employees.userId, leaveApplications.userId)
-        )
-        .where(
-          and(
-            eq(leaveApplications.status, ApplicationStatus.PENDING),
-            eq(employees.departmentId, departmentId),
-            eq(users.role, Role.EMPLOYEE)
-          )
-        );
-      const totalPendingLeaveRequest = await db.$count(
-        totalPendingLeaveRequestQuery
-      );
-
-      const totalOnLeaveEmployeesTodayQuery = db
-        .select()
-        .from(users)
-        .innerJoin(employees, eq(users.userId, employees.userId))
-        .leftJoin(
-          leaveApplications,
-          eq(employees.userId, leaveApplications.userId)
-        )
-        .where(
-          and(
-            eq(leaveApplications.status, ApplicationStatus.APPROVED),
-            eq(users.role, Role.EMPLOYEE),
-            lte(leaveApplications.startDate, today),
-            gte(leaveApplications.endDate, today),
-            eq(employees.departmentId, departmentId)
-          )
-        );
-      const totalOnLeaveEmployeesToday = await db.$count(
-        totalOnLeaveEmployeesTodayQuery
-      );
-
-      return res.status(200).json({
-        status: true,
-        message: `Count of some fields for manager Dashboard of ${matchingManager[0].departmentName} fetched successfully`,
-        departmentName: matchingManager[0].departmentName,
-        totalEmployeesInDept,
-        totalActiveEmployeesInDept,
-        totalAttendedEmployeesToday,
-        totalPendingLeaveRequest,
-        totalOnLeaveEmployeesToday
-      });
-    }
-    return res.status(403).json({
-      status: false,
-      message: "You don't have permission to perform this action",
     });
   } catch (error) {
-    handleError(error, res);
+    throw error;
+  }
+}
+
+export interface ManagerDashboardStats {
+  totalEmployees: number;
+  activeEmployees: number;
+  attendedToday: number;
+  pendingLeave: number;
+  onLeaveToday: number;
+}
+
+export const getManagerDashboardInfo = async (req: SessionRequest, res: Response) => {
+  try {
+    const userId = req.userID!;
+    const { departmentId } = validate(getManagerDashboardInfoSchema, req.query);
+    const dept = await db
+      .select({ managerId: departments.managerId, departmentName: departments.departmentName })
+      .from(departments)
+      .where(eq(departments.departmentId, departmentId))
+      .execute();
+
+    if (dept.length < 1 || dept[0]?.managerId !== userId) {
+      return res.status(403).json({
+        message: "You don't have permission to perform this action",
+      });
+    }
+
+    const stats: ManagerDashboardStats = await db.execute(sql`
+    SELECT
+    COUNT(*) AS "totalEmployees",
+    COUNT(*) FILTER (WHERE e.status = 'active') AS "activeEmployees",
+    COUNT(*) FILTER (WHERE a.employee_id IS NOT NULL) AS "attendedToday",
+    COUNT(*) FILTER (WHERE lp.user_id IS NOT NULL) AS "pendingLeave",
+    COUNT(*) FILTER (WHERE lo.user_id IS NOT NULL) AS "onLeaveToday"
+    FROM employees e
+    JOIN users u ON u.user_id = e.user_id
+    LEFT JOIN (
+    SELECT DISTINCT employee_id
+    FROM attendance
+    WHERE attendance_date = CURRENT_DATE
+    ) a ON a.employee_id = e.employee_id
+    LEFT JOIN (
+    SELECT DISTINCT user_id
+    FROM leave_applications
+    WHERE status = 'pending'
+    ) lp ON lp.user_id = u.user_id
+    LEFT JOIN (
+    SELECT DISTINCT user_id
+    FROM leave_applications
+    WHERE status = 'approved'
+    AND CURRENT_DATE BETWEEN start_date AND end_date
+    ) lo ON lo.user_id = u.user_id
+    WHERE
+    u.role = 'employee'
+    AND e.department_id = ${departmentId}`) as any;
+
+    return res.status(200).json({
+      status: true,
+      message: `Manager Dashboard stats of department ${dept[0]?.departmentName} fetched successfully`,
+      departmentName: dept[0]?.departmentName,
+      data: {
+        totalEmployees: stats.totalEmployees,
+        activeEmployees: stats.activeEmployees,
+        attendedToday: stats.attendedToday,
+        pendingLeave: stats.pendingLeave,
+        onLeaveToday: stats.onLeaveToday,
+      }
+    })
+
+  } catch (error) {
+    throw error;
   }
 };

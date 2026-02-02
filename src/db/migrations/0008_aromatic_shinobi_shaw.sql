@@ -1,1 +1,0 @@
-ALTER TABLE "leave_applications" ALTER COLUMN "user_id" SET DATA TYPE varchar(50);

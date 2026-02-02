@@ -6,7 +6,7 @@ import { z } from "zod";
 import { LeaveType } from "../../types/types";
 import { SessionRequest } from "../../middlewares/verifySession";
 import { getDateDiff } from "../../utils/getDateDiff";
-import { PermissionRequest, Role } from "../../middlewares/checkPermission";
+import { Role } from "../../middlewares/checkPermission";
 import { LeaveFilter, ApplicationStatus } from "../../types/types";
 import { applyLeaveFilters } from "../../utils/leaveFilters";
 import { getPagination, getPagingData } from "../../utils/pagination";
@@ -116,7 +116,7 @@ const updateLeaveSchema = z.object({
   endDate: z.string(),
   reason: z.string(),
 });
-export const updateLeave = async (req: PermissionRequest, res: Response) => {
+export const updateLeave = async (req: SessionRequest, res: Response) => {
   try {
     const currentUserId = req.userID!;
     const leaveId = z.coerce.number().parse(req.params.id);
@@ -165,7 +165,7 @@ const processLeaveSchema = z.object({
   departmentId: z.coerce.number().optional(),
 });
 export const processLeaveRequest = async (
-  req: PermissionRequest,
+  req: SessionRequest,
   res: Response
 ) => {
   try {
@@ -222,7 +222,7 @@ export const processLeaveRequest = async (
   }
 };
 
-export const deleteLeave = async (req: PermissionRequest, res: Response) => {
+export const deleteLeave = async (req: SessionRequest, res: Response) => {
   try {
     const leaveId = z.coerce.number().parse(req.params.id);
     const currentUserId = req.userID!;
@@ -260,7 +260,7 @@ export const deleteLeave = async (req: PermissionRequest, res: Response) => {
 const getOnLeaveSchema = z.object({
   departmentId: z.coerce.number().optional(),
 })
-export const getOnLeave = async (req: PermissionRequest, res: Response) => {
+export const getOnLeave = async (req: SessionRequest, res: Response) => {
   try {
     const currentUserId = req.userID!;
     const role = req.role!;
