@@ -3,6 +3,7 @@ import { env } from "./env";
 
 export interface JwtPayload {
   userId: string;
+  employeeId: number;
   role: string
 }
 

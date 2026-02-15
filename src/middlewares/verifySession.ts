@@ -4,6 +4,7 @@ import { JwtPayload } from "../config/jwt";
 
 export interface SessionRequest extends Request {
   userID?: string;
+  employeeId?: number;
   role?: string;
 }
 export const verifySession = async (req: SessionRequest, res: Response, next: NextFunction) => {
@@ -12,6 +13,7 @@ export const verifySession = async (req: SessionRequest, res: Response, next: Ne
   try {
     const payload = verifyToken(token) as JwtPayload;
     req.userID=payload.userId;
+    req.employeeId=payload.employeeId;
     req.role=payload.role;
     next();
   } catch {

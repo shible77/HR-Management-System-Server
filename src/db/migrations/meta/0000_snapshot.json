@@ -1,5 +1,5 @@
 {
-  "id": "def92584-a1eb-4067-9c61-6900e47d79c3",
+  "id": "4af62e61-e973-434c-880e-372a5dbbf133",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -121,6 +121,12 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -392,9 +398,9 @@
           "primaryKey": true,
           "notNull": true
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
+        "employee_id": {
+          "name": "employee_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -456,7 +462,7 @@
           "name": "leave_user_idx",
           "columns": [
             {
-              "expression": "user_id",
+              "expression": "employee_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -496,20 +502,128 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "leave_active_idx": {
+          "name": "leave_active_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "start_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "end_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "employee_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "leave_pending_user_idx": {
+          "name": "leave_pending_user_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "employee_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_leave_filter": {
+          "name": "idx_leave_filter",
+          "columns": [
+            {
+              "expression": "leave_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "leave_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_leave_employee_date": {
+          "name": "idx_leave_employee_date",
+          "columns": [
+            {
+              "expression": "employee_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "start_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "end_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
-        "leave_applications_user_id_users_user_id_fk": {
-          "name": "leave_applications_user_id_users_user_id_fk",
+        "leave_applications_employee_id_employees_employee_id_fk": {
+          "name": "leave_applications_employee_id_employees_employee_id_fk",
           "tableFrom": "leave_applications",
-          "tableTo": "users",
+          "tableTo": "employees",
           "columnsFrom": [
-            "user_id"
+            "employee_id"
           ],
           "columnsTo": [
-            "user_id"
+            "employee_id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "leave_applications_approved_by_users_user_id_fk": {
@@ -961,7 +1075,6 @@
       "schema": "public",
       "values": [
         "Present",
-        "Absent",
         "Leave"
       ]
     },

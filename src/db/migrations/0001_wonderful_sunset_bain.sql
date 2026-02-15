@@ -1,3 +1,0 @@
-CREATE INDEX IF NOT EXISTS "attendance_date_emp_idx" ON "attendance" USING btree ("employee_id","attendance_date");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "leave_active_idx" ON "leave_applications" USING btree ("status","start_date","end_date","user_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "leave_pending_user_idx" ON "leave_applications" USING btree ("status","user_id");

@@ -65,9 +65,9 @@ export const addresses = pgTable('addresses', {
     })
 )
 
-export const attendanceStatusEnum = pgEnum("Attendance_status_enum", ["Present", "Absent", "Leave"]);
+export const attendanceStatusEnum = pgEnum("Attendance_status_enum", ["Present", "Leave"]);
 
-// Define the Attendance Table
+
 export const attendance = pgTable('attendance', {
     attendanceId: serial('attendance_id').primaryKey(),
     employeeId: integer('employee_id')
@@ -77,13 +77,12 @@ export const attendance = pgTable('attendance', {
     checkInTime: time('check_in_time'),
     checkOutTime: time('check_out_time'),
     status: attendanceStatusEnum('status').notNull(),
+    source: varchar("source", { length: 20 }),
 },
     (table) => ({
         employeeDateIdx: uniqueIndex('attendance_emp_date_idx')
             .on(table.employeeId, table.attendanceDate),
         statusIdx: index('attendance_status_idx').on(table.status),
-        dateEmployeeIdx: index('attendance_date_emp_idx')
-            .on(table.employeeId, table.attendanceDate),
     })
 );
 
@@ -93,8 +92,8 @@ export const applicationStatus = pgEnum('application_status', ['pending', 'appro
 
 export const leaveApplications = pgTable('leave_applications', {
     leaveId: serial('leave_id').primaryKey(),
-    userId: uuid('user_id')
-        .references(() => users.userId)
+    employeeId: integer('employee_id')
+        .references(() => employees.employeeId, { onDelete: 'cascade' })
         .notNull(),
     leaveType: leaveTypes('leave_type').notNull(),
     startDate: date('start_date'),
@@ -106,13 +105,14 @@ export const leaveApplications = pgTable('leave_applications', {
     approvedBy: uuid('approved_by').references(() => users.userId),
 },
     (table) => ({
-        userIdx: index('leave_user_idx').on(table.userId),
+        userIdx: index('leave_user_idx').on(table.employeeId),
         statusIdx: index('leave_status_idx').on(table.status),
         approverIdx: index('leave_approved_by_idx').on(table.approvedBy),
 
-        activeLeaveIdx: index('leave_active_idx').on(table.status, table.startDate, table.endDate, table.userId),
-        pendingLeaveIdx: index('leave_pending_user_idx').on(table.status, table.userId),
-        getLeaveIdx: index('idx_leave_filter').on(table.leaveType, table.status, table.leaveId)
+        activeLeaveIdx: index('leave_active_idx').on(table.status, table.startDate, table.endDate, table.employeeId),
+        pendingLeaveIdx: index('leave_pending_user_idx').on(table.status, table.employeeId),
+        getLeaveIdx: index('idx_leave_filter').on(table.leaveType, table.status, table.leaveId),
+        idxEmployeeDateRange: index("idx_leave_employee_date").on(table.employeeId, table.startDate,table.endDate),
     })
 );
 

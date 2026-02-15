@@ -14,10 +14,11 @@ export const applyLeave = async (req: SessionRequest, res: Response) => {
   try {
     const { leaveTypes, startDate, endDate, reason } = validate(leaveReqBody, req.body);
     const userId = req.userID!;
+    const employeeId = req.employeeId!;
     const days = getDateDiff(startDate, endDate);
     await db.insert(leaveApplications)
       .values({
-        userId,
+        employeeId: employeeId,
         leaveType: leaveTypes,
         startDate: startDate,
         endDate: endDate,
@@ -38,7 +39,7 @@ export const applyLeave = async (req: SessionRequest, res: Response) => {
 
 export const getLeave = async (req: SessionRequest, res: Response) => {
   try {
-    const { leaveType, status, departmentId, limit, cursor } = validate(leaveFilterSchema, { ...req.query, limit: req.query.limit , cursor: req.query.cursor || undefined });
+    const { leaveType, status, departmentId, limit, cursor } = validate(leaveFilterSchema, { ...req.query, limit: req.query.limit, cursor: req.query.cursor || undefined });
 
     const filter: LeaveFilter = { leaveType, status, departmentId };
 
@@ -50,7 +51,7 @@ export const getLeave = async (req: SessionRequest, res: Response) => {
 
     const leaves = await db.select({
       leaveId: leaveApplications.leaveId,
-      userId: leaveApplications.userId,
+      employeeId: leaveApplications.employeeId,
       firstName: users.firstName,
       lastName: users.lastName,
       leaveType: leaveApplications.leaveType,
@@ -62,7 +63,7 @@ export const getLeave = async (req: SessionRequest, res: Response) => {
       status: leaveApplications.status,
     }).
       from(leaveApplications)
-      .innerJoin(employees, eq(employees.userId, leaveApplications.userId))
+      .innerJoin(employees, eq(employees.employeeId, leaveApplications.employeeId))
       .innerJoin(users, eq(users.userId, employees.userId))
       .leftJoin(departments, eq(departments.departmentId, employees.departmentId))
       .where(condition.length > 0 ? and(...condition) : undefined)
@@ -185,16 +186,34 @@ export const getOnLeave = async (req: SessionRequest, res: Response) => {
         });
     }
     if (role === Role.MANAGER) {
-      const onLeaveEmployees = await db.select({ firstName: users.firstName, lastName: users.lastName, employeeId: employees.employeeId, designation: employees.designation, phone: users.phone, email: users.email }).from(leaveApplications)
-        .leftJoin(users, eq(users.userId, leaveApplications.userId))
-        .leftJoin(employees, eq(users.userId, employees.userId))
-        .where(and(
-          eq(leaveApplications.status, ApplicationStatus.APPROVED),
-          lte(leaveApplications.startDate, today),
-          gte(leaveApplications.endDate, today),
-          eq(employees.departmentId, Number(departmentId))
-        ))
+      const onLeaveEmployees = await db
+        .selectDistinct({
+          firstName: users.firstName,
+          lastName: users.lastName,
+          employeeId: employees.employeeId,
+          designation: employees.designation,
+          phone: users.phone,
+          email: users.email,
+        })
+        .from(leaveApplications)
+        .innerJoin(
+          employees,
+          eq(leaveApplications.employeeId, employees.employeeId)
+        )
+        .innerJoin(
+          users,
+          eq(users.userId, employees.userId)
+        )
+        .where(
+          and(
+            eq(leaveApplications.status, ApplicationStatus.APPROVED),
+            lte(leaveApplications.startDate, today),
+            gte(leaveApplications.endDate, today),
+            eq(employees.departmentId, Number(departmentId))
+          )
+        )
         .execute();
+
       return res.status(200).json({
         status: true,
         message: "List of employees who are on leave today",

@@ -1,5 +1,5 @@
 CREATE TYPE "public"."application_status" AS ENUM('pending', 'approved', 'rejected');--> statement-breakpoint
-CREATE TYPE "public"."Attendance_status_enum" AS ENUM('Present', 'Absent', 'Leave');--> statement-breakpoint
+CREATE TYPE "public"."Attendance_status_enum" AS ENUM('Present', 'Leave');--> statement-breakpoint
 CREATE TYPE "public"."leave_types" AS ENUM('casual', 'medical', 'annual');--> statement-breakpoint
 CREATE TYPE "public"."role" AS ENUM('admin', 'manager', 'employee');--> statement-breakpoint
 CREATE TYPE "public"."status" AS ENUM('active', 'inactive');--> statement-breakpoint
@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS "attendance" (
 	"attendance_date" date NOT NULL,
 	"check_in_time" time,
 	"check_out_time" time,
-	"status" "Attendance_status_enum" NOT NULL
+	"status" "Attendance_status_enum" NOT NULL,
+	"source" varchar(20)
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "departments" (
@@ -39,7 +40,7 @@ CREATE TABLE IF NOT EXISTS "employees" (
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "leave_applications" (
 	"leave_id" serial PRIMARY KEY NOT NULL,
-	"user_id" uuid NOT NULL,
+	"employee_id" integer NOT NULL,
 	"leave_type" "leave_types" NOT NULL,
 	"start_date" date,
 	"end_date" date,
@@ -123,7 +124,7 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "leave_applications" ADD CONSTRAINT "leave_applications_user_id_users_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("user_id") ON DELETE no action ON UPDATE no action;
+ ALTER TABLE "leave_applications" ADD CONSTRAINT "leave_applications_employee_id_employees_employee_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("employee_id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -166,9 +167,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS "departments_name_idx" ON "departments" USING 
 CREATE UNIQUE INDEX IF NOT EXISTS "employees_user_id_idx" ON "employees" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "employees_department_idx" ON "employees" USING btree ("department_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "employees_status_idx" ON "employees" USING btree ("status");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "leave_user_idx" ON "leave_applications" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "leave_user_idx" ON "leave_applications" USING btree ("employee_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "leave_status_idx" ON "leave_applications" USING btree ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "leave_approved_by_idx" ON "leave_applications" USING btree ("approved_by");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "leave_active_idx" ON "leave_applications" USING btree ("status","start_date","end_date","employee_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "leave_pending_user_idx" ON "leave_applications" USING btree ("status","employee_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_leave_filter" ON "leave_applications" USING btree ("leave_type","status","leave_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_leave_employee_date" ON "leave_applications" USING btree ("employee_id","start_date","end_date");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "payroll_emp_month_idx" ON "payroll" USING btree ("employee_id","pay_month");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "payroll_employee_idx" ON "payroll" USING btree ("employee_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "performance_emp_date_idx" ON "performance_reviews" USING btree ("employee_id","review_date");--> statement-breakpoint

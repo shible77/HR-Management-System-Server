@@ -36,7 +36,7 @@ export const insertAttendanceForAllEmployees = async (req: Request, res: Respons
         .values({
           employeeId: employee.employeeId,
           attendanceDate: date,
-          status: "Absent", // Default status is "Absent" for all employees
+          status: "Present", // Default status is "Absent" for all employees
         })
         .execute();
     });

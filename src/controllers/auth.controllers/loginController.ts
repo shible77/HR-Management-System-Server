@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { users } from "../../db/schema";
+import { employees, users } from "../../db/schema";
 import { db } from "../../db/setup";
 import { eq } from "drizzle-orm";
 import { validate } from "../../utils/validate";
@@ -10,13 +10,20 @@ export const loginUser = async (req: Request, res: Response) => {
   try {
     const { email, password } = validate(loginSchema, req.body);
     const user = await db
-      .select()
+      .select({
+        userId: users.userId,
+        password: users.password,
+        role: users.role,
+        employeeId: employees.employeeId
+      })
       .from(users)
+      .innerJoin(employees, eq(users.userId, employees.userId))
       .where(eq(users.email, email))
+      .limit(1)
       .execute();
 
     if (user.length > 0 && user[0].password === password) {
-      const userToken = generateToken({userId: user[0].userId, role: user[0].role})
+      const userToken = generateToken({userId: user[0].userId, employeeId: user[0].employeeId, role: user[0].role})
       res.cookie("token", userToken, {
         httpOnly: false, // Prevents client-side JavaScript from accessing the cookie
         secure: false, //process.env.NODE_ENV === 'production',      // Ensures the cookie is only sent over HTTPS
