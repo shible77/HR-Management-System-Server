@@ -112,6 +112,7 @@ export const leaveApplications = pgTable('leave_applications', {
 
         activeLeaveIdx: index('leave_active_idx').on(table.status, table.startDate, table.endDate, table.userId),
         pendingLeaveIdx: index('leave_pending_user_idx').on(table.status, table.userId),
+        getLeaveIdx: index('idx_leave_filter').on(table.leaveType, table.status, table.leaveId)
     })
 );
 

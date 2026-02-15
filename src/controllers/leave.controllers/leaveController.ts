@@ -1,33 +1,21 @@
 import { Response } from "express";
 import { db } from "../../db/setup";
 import { leaveApplications, users, employees, departments } from "../../db/schema";
-import { eq, and, asc, desc, sql, gte, lte } from "drizzle-orm";
-import { z } from "zod";
-import { LeaveType } from "../../types/types";
+import { eq, and, sql, gte, lte, gt, asc } from "drizzle-orm";
 import { SessionRequest } from "../../middlewares/verifySession";
 import { getDateDiff } from "../../utils/getDateDiff";
 import { Role } from "../../middlewares/checkPermission";
 import { LeaveFilter, ApplicationStatus } from "../../types/types";
 import { applyLeaveFilters } from "../../utils/leaveFilters";
-import { getPagination, getPagingData } from "../../utils/pagination";
-import { handleError } from "../../utils/handleError";
-
-const leaveReqBody = z.object({
-  leaveTypes: z.enum([LeaveType.CASUAL, LeaveType.MEDICAL, LeaveType.ANNUAL]),
-  startDate: z.string(),
-  endDate: z.string(),
-  reason: z.string(),
-});
+import { validate } from "../../utils/validate";
+import { leaveReqBody, leaveFilterSchema, updateLeaveSchema, processLeaveSchema, getOnLeaveSchema, deleteLeaveSchema } from "../../validators/leave.schema";
 
 export const applyLeave = async (req: SessionRequest, res: Response) => {
   try {
-    const { leaveTypes, startDate, endDate, reason } = leaveReqBody.parse(
-      req.body
-    );
+    const { leaveTypes, startDate, endDate, reason } = validate(leaveReqBody, req.body);
     const userId = req.userID!;
     const days = getDateDiff(startDate, endDate);
-    const application = await db
-      .insert(leaveApplications)
+    await db.insert(leaveApplications)
       .values({
         userId,
         leaveType: leaveTypes,
@@ -36,108 +24,74 @@ export const applyLeave = async (req: SessionRequest, res: Response) => {
         reason,
         totalDays: days,
       })
-      .returning({ leaveId: leaveApplications.leaveId })
       .execute();
 
     return res.status(201).json({
-      message: "Leave Application Created Successfully",
-      leaveId: application[0].leaveId,
+      status: true,
+      message: "Leave Application Created Successfully"
     });
   } catch (error) {
-    handleError(error, res)
+    throw error;
   }
 };
 
-const leaveFilterSchema = z.object({
-  departmentId: z.coerce.number().optional(),
-  userId: z.string().optional(),
-  leaveType: z
-    .enum([LeaveType.CASUAL, LeaveType.MEDICAL, LeaveType.ANNUAL])
-    .optional(),
-  status: z
-    .enum([
-      ApplicationStatus.PENDING,
-      ApplicationStatus.APPROVED,
-      ApplicationStatus.REJECTED,
-    ])
-    .optional(),
-  page: z.coerce.number().min(1).default(1).optional(),
-  pageSize: z.coerce.number().min(1).default(10).optional(),
-});
+
 export const getLeave = async (req: SessionRequest, res: Response) => {
   try {
-    const { userId, leaveType, status, departmentId, page, pageSize } =
-      leaveFilterSchema.parse(req.query);
-    const filter: LeaveFilter = { userId, leaveType, status, departmentId };
-    let query = db
-      .select({
-        leaveId: leaveApplications.leaveId,
-        userId: leaveApplications.userId,
-        leaveType: leaveApplications.leaveType,
-        startDate: leaveApplications.startDate,
-        endDate: leaveApplications.endDate,
-        totalDays: leaveApplications.totalDays,
-        status: leaveApplications.status,
-        reason: leaveApplications.reason,
-        appliedAt: leaveApplications.appliedAt,
-        approvedBy: leaveApplications.approvedBy,
-        departmentId: employees.departmentId,
-      })
-      .from(leaveApplications)
-      .leftJoin(employees, eq(employees.userId, leaveApplications.userId));
-    const { limit, offset } = getPagination(Number(page) - 1, Number(pageSize));
-    query = applyLeaveFilters(query, filter);
-    const totalFilteredData = await db.$count(query);
-    const leaveApp = await query.limit(limit).offset(offset).execute();
-    if (leaveApp.length === 0) {
-      return res.status(404).json({ message: "No Leave Application found" });
+    const { leaveType, status, departmentId, limit, cursor } = validate(leaveFilterSchema, { ...req.query, limit: req.query.limit , cursor: req.query.cursor || undefined });
+
+    const filter: LeaveFilter = { leaveType, status, departmentId };
+
+    let condition: any[] = [];
+    if (cursor) {
+      condition.push(gt(leaveApplications.leaveId, cursor));
     }
-    const response = getPagingData(
-      leaveApp,
-      totalFilteredData,
-      Number(page),
-      limit,
-      offset
-    );
+    condition = applyLeaveFilters(condition, filter);
+
+    const leaves = await db.select({
+      leaveId: leaveApplications.leaveId,
+      userId: leaveApplications.userId,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      leaveType: leaveApplications.leaveType,
+      departmentName: departments.departmentName,
+      startDate: leaveApplications.startDate,
+      endDate: leaveApplications.endDate,
+      reason: leaveApplications.reason,
+      totalDays: leaveApplications.totalDays,
+      status: leaveApplications.status,
+    }).
+      from(leaveApplications)
+      .innerJoin(employees, eq(employees.userId, leaveApplications.userId))
+      .innerJoin(users, eq(users.userId, employees.userId))
+      .leftJoin(departments, eq(departments.departmentId, employees.departmentId))
+      .where(condition.length > 0 ? and(...condition) : undefined)
+      .orderBy(asc(leaveApplications.leaveId))
+      .limit(limit + 1)
+      .execute();
+
+    const hasMore: boolean = leaves.length > limit;
+    const sliced = hasMore ? leaves.slice(0, -1) : leaves;
+    const nextCursor = hasMore ? sliced[sliced.length - 1] : null;
+
     return res.status(200).json({
-      message: "Leave Application fetched Successfully",
-      totalItems: totalFilteredData,
-      pageSize: limit,
-      ...response,
-    });
+      status: true,
+      message: "Leave Applications fetched successfully",
+      data: sliced,
+      pageInfo: {
+        hasMore,
+        nextCursor
+      }
+    })
+
   } catch (error) {
-    handleError(error, res)
+    throw error;
   }
 };
 
-const updateLeaveSchema = z.object({
-  leaveTypes: z.enum([LeaveType.CASUAL, LeaveType.MEDICAL, LeaveType.ANNUAL]),
-  startDate: z.string(),
-  endDate: z.string(),
-  reason: z.string(),
-});
 export const updateLeave = async (req: SessionRequest, res: Response) => {
   try {
-    const currentUserId = req.userID!;
-    const leaveId = z.coerce.number().parse(req.params.id);
-    const getLeaveById = await db
-      .select()
-      .from(leaveApplications)
-      .where(eq(leaveApplications.leaveId, leaveId))
-      .execute();
-    if (getLeaveById.length === 0) {
-      return res.status(404).json({ message: "Leave Application not found" });
-    }
-    if (getLeaveById[0].userId !== currentUserId) {
-      return res
-        .status(403)
-        .json({
-          message: "You are not authorized to update this leave application",
-        });
-    }
-    const { leaveTypes, startDate, endDate, reason } = updateLeaveSchema.parse(
-      req.body
-    );
+    const { leaveTypes, startDate, endDate, reason, leaveId } = validate(updateLeaveSchema, { ...req.body, leaveId: req.params.id });
     const days = getDateDiff(startDate, endDate);
     const application = await db
       .update(leaveApplications)
@@ -149,124 +103,65 @@ export const updateLeave = async (req: SessionRequest, res: Response) => {
         totalDays: days,
       })
       .where(eq(leaveApplications.leaveId, leaveId))
-      .returning({ leaveId: leaveApplications.leaveId })
       .execute();
+    if (application.rowCount === 0) {
+      return res.status(404).json({ message: "Leave application not found" });
+    }
     return res.status(200).json({
+      status: true,
       message: "Leave Application Updated Successfully",
-      leaveId: application[0].leaveId,
     });
   } catch (error) {
-    handleError(error, res)
+    throw error;
   }
 };
 
-const processLeaveSchema = z.object({
-  status: z.enum([ApplicationStatus.APPROVED, ApplicationStatus.REJECTED]),
-  departmentId: z.coerce.number().optional(),
-});
-export const processLeaveRequest = async (
-  req: SessionRequest,
-  res: Response
-) => {
+
+export const processLeaveRequest = async (req: SessionRequest, res: Response) => {
   try {
-    const leaveId = z.coerce.number().parse(req.params.id);
-    const { status, departmentId } = processLeaveSchema.parse(req.query);
+    const { status, leaveId } = validate(processLeaveSchema, { status: req.query.status, leaveId: req.params.id });
     const currentUser = req.userID!;
-    if (req.role! === Role.ADMIN) {
-      const application = await db
-        .update(leaveApplications)
-        .set({ status, approvedBy: currentUser })
-        .where(eq(leaveApplications.leaveId, leaveId))
-        .returning({ leaveId: leaveApplications.leaveId })
-        .execute();
-      return res.status(200).json({
-        message: "Leave Application Processed Successfully",
-        leaveId: application[0].leaveId,
-      });
+
+    const application = await db
+      .update(leaveApplications)
+      .set({ status, approvedBy: currentUser })
+      .where(and(eq(leaveApplications.leaveId, leaveId), eq(leaveApplications.status, ApplicationStatus.PENDING)))
+      .execute();
+    if (application.rowCount === 0) {
+      return res.status(404).json({ message: "Leave application not found or already processed" });
     }
-    if (req.role! === Role.MANAGER) {
-      const dept = await db
-        .select({ managerId: departments.managerId })
-        .from(departments)
-        .where(eq(departments.departmentId, Number(departmentId)))
-        .execute();
-      if (
-        dept.length === 0 ||
-        dept[0].managerId === null ||
-        dept[0].managerId !== currentUser
-      ) {
-        return res
-          .status(403)
-          .json({
-            message: "You are not authorized to process this leave application",
-          });
-      }
-      const application = await db
-        .update(leaveApplications)
-        .set({ status, approvedBy: currentUser })
-        .where(eq(leaveApplications.leaveId, leaveId))
-        .returning({ leaveId: leaveApplications.leaveId })
-        .execute();
-      return res.status(200).json({
-        message: "Leave Application Processed Successfully",
-        leaveId: application[0].leaveId,
-      });
-    }
-    return res
-      .status(403)
-      .json({
-        message: "You are not authorized to process this leave application",
-      });
+    return res.status(200).json({
+      status: true,
+      message: "Leave Application Processed Successfully"
+    });
   } catch (error) {
-    handleError(error, res)
+    throw error;
   }
 };
 
 export const deleteLeave = async (req: SessionRequest, res: Response) => {
   try {
-    const leaveId = z.coerce.number().parse(req.params.id);
-    const currentUserId = req.userID!;
-    const getLeaveById = await db
-      .select({
-        userId: leaveApplications.userId,
-        status: leaveApplications.status,
-      })
-      .from(leaveApplications)
+    const { leaveId } = validate(deleteLeaveSchema, { leaveId: req.params.id });
+    const result = await db
+      .delete(leaveApplications)
       .where(eq(leaveApplications.leaveId, leaveId))
       .execute();
-    if (
-      getLeaveById.length !== 0 &&
-      getLeaveById[0].status === ApplicationStatus.PENDING &&
-      (getLeaveById[0].userId === currentUserId || req.role! === Role.ADMIN)
-    ) {
-      await db
-        .delete(leaveApplications)
-        .where(eq(leaveApplications.leaveId, leaveId))
-        .execute();
-      return res
-        .status(200)
-        .json({ message: "Leave Application Deleted Successfully" });
+    if (result.rowCount === 0) {
+      return res.status(404).json({ status: false, message: "Leave application not found" });
     }
-    return res
-      .status(403)
-      .json({
-        message: "You are not authorized to delete this leave application",
-      });
+    return res.status(200).json({ status: true, message: "Leave Application Deleted Successfully" });
   } catch (error) {
-    handleError(error, res)
+    throw error;
   }
 };
 
-const getOnLeaveSchema = z.object({
-  departmentId: z.coerce.number().optional(),
-})
+
 export const getOnLeave = async (req: SessionRequest, res: Response) => {
   try {
-    const currentUserId = req.userID!;
     const role = req.role!;
-    const { departmentId } = getOnLeaveSchema.parse(req.query);
+    const { departmentId } = validate(getOnLeaveSchema, req.query);
     const today = new Date().toISOString().split("T")[0];
-    if(role === Role.ADMIN) {
+    if (role === Role.ADMIN) {
       const groupedLeavesToday = await db.execute(sql`
         SELECT 
           employees.department_id AS "departmentId",
@@ -282,28 +177,24 @@ export const getOnLeave = async (req: SessionRequest, res: Response) => {
         GROUP BY employees.department_id, departments.department_name;
       `);
       return res
-      .status(200)
-      .json({
-        status: true,
-        message: "Department-wise data who are on leave today",
-        data: groupedLeavesToday.rows,
-      });
+        .status(200)
+        .json({
+          status: true,
+          message: "Department-wise data who are on leave today",
+          data: groupedLeavesToday.rows,
+        });
     }
-    if(role === Role.MANAGER) {
-      const dept = await db.select({managerId: departments.managerId}).from(departments).where(eq(departments.departmentId, Number(departmentId))).execute();
-      if(dept.length === 0 || dept[0].managerId === null || dept[0].managerId !== currentUserId) {
-        return res.status(403).json({message: "You are not authorized to access this resource"});
-      }
-      const onLeaveEmployees = await db.select({firstName: users.firstName, lastName: users.lastName, employeeId: employees.employeeId, designation: employees.designation, phone: users.phone, email: users.email}).from(leaveApplications)
-      .leftJoin(users, eq(users.userId, leaveApplications.userId))
-      .leftJoin(employees, eq(users.userId, employees.userId))
-      .where(and(
-        eq(leaveApplications.status, ApplicationStatus.APPROVED),
-        lte(leaveApplications.startDate, today),
-        gte(leaveApplications.endDate, today),
-        eq(employees.departmentId, Number(departmentId))
-      ))
-      .execute();
+    if (role === Role.MANAGER) {
+      const onLeaveEmployees = await db.select({ firstName: users.firstName, lastName: users.lastName, employeeId: employees.employeeId, designation: employees.designation, phone: users.phone, email: users.email }).from(leaveApplications)
+        .leftJoin(users, eq(users.userId, leaveApplications.userId))
+        .leftJoin(employees, eq(users.userId, employees.userId))
+        .where(and(
+          eq(leaveApplications.status, ApplicationStatus.APPROVED),
+          lte(leaveApplications.startDate, today),
+          gte(leaveApplications.endDate, today),
+          eq(employees.departmentId, Number(departmentId))
+        ))
+        .execute();
       return res.status(200).json({
         status: true,
         message: "List of employees who are on leave today",
@@ -311,6 +202,6 @@ export const getOnLeave = async (req: SessionRequest, res: Response) => {
       });
     }
   } catch (error) {
-    handleError(error, res)
+    throw error;
   }
 };

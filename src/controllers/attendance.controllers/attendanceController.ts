@@ -1,7 +1,6 @@
-import { db } from "../../db/setup";// Your Drizzle ORM database instance
-import { attendance, employees } from "../../db/schema";// Your Attendance schema
+import { db } from "../../db/setup";
+import { attendance, employees } from "../../db/schema";
 import { eq, and } from "drizzle-orm/expressions";
-
 import { Request, Response } from "express";
 
 

@@ -20,9 +20,6 @@ export interface attendanceStatsType {
   totalOnLeaveToday: number;
 }
 
-const getDashboardInfoSchema = z.object({
-  departmentId: z.coerce.number().optional(),
-});
 export const getAdminDashboardInfo = async (req: SessionRequest, res: Response) => {
   try {
 

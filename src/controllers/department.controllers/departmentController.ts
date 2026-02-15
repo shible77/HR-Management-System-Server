@@ -3,14 +3,11 @@ import { db } from "../../db/setup";
 import { departments, employees, users } from "../../db/schema";
 import { z } from "zod";
 import { Role } from "../../middlewares/checkPermission";
-import { eq } from "drizzle-orm";
-import { handleError } from "../../utils/handleError";
+import { eq, and, ne } from "drizzle-orm";
 import { SessionRequest } from "../../middlewares/verifySession";
+import { departmentReqBody, assignManagerReqBody, assignEmployeeReqBody } from "../../validators/department.schema";
+import { validate } from "../../utils/validate";
 
-const departmentReqBody = z.object({
-  departmentName: z.string().max(50),
-  description: z.string(),
-});
 export const createDepartment = async (
   req: SessionRequest,
   res: Response
@@ -21,7 +18,7 @@ export const createDepartment = async (
         .status(403)
         .json({ message: "You do not have permission to perform this" });
     }
-    const { departmentName, description } = departmentReqBody.parse(req.body);
+    const { departmentName, description } = validate(departmentReqBody, req.body);
     const department = await db
       .insert(departments)
       .values({
@@ -35,13 +32,11 @@ export const createDepartment = async (
       departmentID: department[0].departmentId,
     });
   } catch (error) {
-    handleError(error, res)
+    throw error;
   }
 };
 
-const assignManagerReqBody = z.object({
-  userId: z.string().max(50),
-});
+
 export const assignManager = async (req: SessionRequest, res: Response) => {
   try {
     if (req.role !== Role.ADMIN) {
@@ -50,43 +45,36 @@ export const assignManager = async (req: SessionRequest, res: Response) => {
         .json({ message: "You do not have permission to perform this" });
     }
     const departmentId = z.coerce.number().parse(req.params.id);
-    const { userId } = assignManagerReqBody.parse(req.body);
-    if (departmentId && userId) {
-      await db
-        .update(departments)
-        .set({ managerId: userId })
-        .where(eq(departments.departmentId, departmentId))
-        .execute();
-      await db
-        .update(employees)
-        .set({ departmentId: departmentId })
-        .where(eq(employees.userId, userId))
-        .execute();
-      const user = await db
-        .select({ role: users.role })
-        .from(users)
-        .where(eq(users.userId, userId))
-        .execute();
-      if (user[0].role !== Role.MANAGER) {
-        await db
-          .update(users)
-          .set({ role: Role.MANAGER })
-          .where(eq(users.userId, userId))
-          .execute();
-      }
-      return res
-        .status(200)
-        .json({ status: true, message: "Manager assigned successfully" });
-    }
-    return res.status(400).json({ status: false, message: "Invalid request" });
+    const { userId } = validate(assignManagerReqBody, req.body);
+    await db.transaction(async (tx) => {
+      await tx
+      .update(departments)
+      .set({ managerId: userId })
+      .where(eq(departments.departmentId, departmentId));
+      await tx
+      .update(employees)
+      .set({ departmentId })
+      .where(eq(employees.userId, userId));
+    await tx
+      .update(users)
+      .set({ role: Role.MANAGER })
+      .where(
+        and(
+          ne(users.role, Role.MANAGER),
+          eq(users.userId, userId)
+        )
+      );
+    })
+    return res.status(200).json({
+      status: true,
+      message: "Manager assigned successfully",
+    });
   } catch (error) {
-    handleError(error, res)
+    throw error;
   }
 };
 
-const assignEmployeeReqBody = z.object({
-  departmentId : z.number()
-})
+
 export const assignEmployee = async (req: SessionRequest, res: Response) => {
   try {
     if (req.role! === Role.EMPLOYEE) {
@@ -95,10 +83,10 @@ export const assignEmployee = async (req: SessionRequest, res: Response) => {
         .json({ message: "You do not have permission to perform this" });
     }
     const employeeId = z.coerce.number().parse(req.params.id);
-    const { departmentId } = assignEmployeeReqBody.parse(req.body);
+    const { departmentId } = validate(assignEmployeeReqBody, req.body);;
     await db.update(employees).set({ departmentId }).where(eq(employees.employeeId, employeeId)).execute();
     return res.status(200).json({ status: true, message: "Employee assigned successfully" });
   } catch (error) {
-    handleError(error, res)
+    throw error;
   }
 };

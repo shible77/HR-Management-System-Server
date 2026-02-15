@@ -1,22 +1,14 @@
 import { employees } from "../../db/schema";
 import { Request, Response } from "express";
-import { z } from "zod";
 import { db } from "../../db/setup";
 import { users } from "../../db/schema";
 import { v7 as uuidv7 } from "uuid";
 import { Role } from "../../middlewares/checkPermission";
 import { SessionRequest } from "../../middlewares/verifySession";
 const crypto = require("crypto");
+import { createUserBody } from "../../validators/auth.schema";
+import { validate } from "../../utils/validate";
 
-const userReqBody = z.object({
-  firstName: z.string(),
-  lastName: z.string(),
-  phone: z.string().nullable(),
-  username: z.string(),
-  email: z.string().email(),
-  password: z.string(),
-  role: z.enum(["admin", "manager", "employee"]),
-});
 export const createUser = async (req: SessionRequest, res: Response) => {
   try {
     if (req.role !== Role.ADMIN) {
@@ -24,8 +16,7 @@ export const createUser = async (req: SessionRequest, res: Response) => {
         .status(403)
         .json({ message: "You do not have permission to perform this" });
     }
-    const { firstName, lastName, phone, username, email, password, role } =
-      userReqBody.parse(req.body);
+    const { firstName, lastName, phone, username, email, password, role } = validate(createUserBody, req.body);
     const userId = uuidv7();
     const user = await db
       .insert(users)
@@ -57,7 +48,7 @@ export const createUser = async (req: SessionRequest, res: Response) => {
         message: "User created successfully",
         data: { userId: user[0].userId, employeeId: employee[0].employeeId },
       });
-  } catch{
-    throw new Error("server error")
+  } catch(error){
+    throw error; 
   }
 };

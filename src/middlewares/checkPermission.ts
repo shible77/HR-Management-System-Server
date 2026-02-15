@@ -18,8 +18,8 @@ export const checkPermission = ((givenRole: Role[]) => {
           .json({ status: false, message: "You do not have permission to perform this" });
       }
       next();
-    } catch {
-      throw new Error("Internal server error");
+    } catch (error) {
+      throw error;
     }
   };
 })

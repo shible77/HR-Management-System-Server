@@ -3,9 +3,12 @@ import { db } from "../db/setup";
 import { users, employees, departments, addresses } from "../db/schema";
 import { eq, and, inArray, gt } from "drizzle-orm";
 import { Response } from "express";
-import { z } from "zod";
 import { UserFilter } from "../types/types";
 import { applyUserFilters } from "../utils/userFilters";
+import { getUsersSchema, getUserSchema } from "../validators/user.schema";
+import { validate } from "../utils/validate";
+import { applyOneUserFilters } from "../utils/oneUserFilter";
+import { oneUserFilterType } from "../types/types";
 
 export const getCurrentUser = async (req: SessionRequest, res: Response) => {
   try {
@@ -41,9 +44,10 @@ export const getCurrentUser = async (req: SessionRequest, res: Response) => {
 
 export const getUser = async (req: SessionRequest, res: Response) => {
   try {
-    const user_id = z.coerce.string().optional().parse(req.query.uid);
-    const employee_id = z.coerce.number().optional().parse(req.query.eid);
-    const query = db
+    const { uid, eid, username, phone, email } = validate(getUserSchema, {...req.query, uid: req.params.uid || undefined, eid: req.params.eid || undefined});
+    const filter: oneUserFilterType = { uid, eid, username, phone, email };
+
+    let query = db
       .select({
         userId: users.userId,
         firstName: users.firstName,
@@ -73,15 +77,7 @@ export const getUser = async (req: SessionRequest, res: Response) => {
       )
       .leftJoin(addresses, eq(users.userId, addresses.userId));
 
-    if (user_id && employee_id) {
-      query.where(
-        and(eq(users.userId, user_id), eq(employees.employeeId, employee_id)),
-      );
-    } else if (user_id) {
-      query.where(eq(users.userId, user_id));
-    } else if (employee_id) {
-      query.where(eq(employees.employeeId, employee_id));
-    }
+    query=applyOneUserFilters(query, filter);
 
     const user_info = await query.execute();
     if (user_info.length === 0) {
@@ -100,16 +96,8 @@ export const getUser = async (req: SessionRequest, res: Response) => {
 
 export const getUsers = async (req: SessionRequest, res: Response) => {
   try {
-    const filter: UserFilter = req.query;
-    const limit = z.coerce
-      .number()
-      .min(1)
-      .max(100)
-      .optional()
-      .default(10)
-      .parse(req.query.limit);
-    const cursor = z.coerce.string().optional().parse(req.query.cursor);
-
+   const { departmentId, designation, hireDate, status, role, limit, cursor } = validate(getUsersSchema, {...req.query, limit: req.params.limit, cursor: req.params.cursor || undefined});
+    const filter: UserFilter = { departmentId, designation, hireDate, status, role };
     let query = db
       .select({ userId: users.userId })
       .from(users)

@@ -6,14 +6,19 @@ export enum Status {
   }
 export type UserFilter = {
     departmentId?: number;
-    username? : string;
-    phone?: string;
-    email?: string;
     designation?: string;
     hireDate?: string;
     status?: Status;
     role?: Role;
   };
+
+  export type oneUserFilterType = {
+      uid?: string;
+      eid?: number;
+      username?: string;
+      phone?: string;
+      email?: string;
+  }
 
   export enum LeaveType {
     CASUAL = "casual",
@@ -28,7 +33,6 @@ export type UserFilter = {
   }
 
   export type LeaveFilter = {
-    userId?: string;
     leaveType?: LeaveType;
     status?: ApplicationStatus;
     departmentId? : number;

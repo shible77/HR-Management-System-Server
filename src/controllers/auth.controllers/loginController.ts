@@ -34,6 +34,6 @@ export const loginUser = async (req: Request, res: Response) => {
       message: "Invalid email or password",
     });
   } catch (error) {
-    throw new Error("Login failed");
+    throw error;
   }
 };

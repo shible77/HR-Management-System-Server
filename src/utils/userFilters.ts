@@ -7,15 +7,6 @@ export function applyUserFilters(query: any, filters: UserFilter) {
   if (filters.departmentId) {
     conditions.push(eq(employees.departmentId, filters.departmentId));
   }
-  if (filters.username) {
-    conditions.push(eq(users.username, filters.username));
-  }
-  if (filters.phone) {
-    conditions.push(eq(users.phone, filters.phone));
-  }
-  if (filters.email) {
-    conditions.push(eq(users.email, filters.email));
-  }
   if (filters.designation) {
     conditions.push(eq(employees.designation, filters.designation));
   }
