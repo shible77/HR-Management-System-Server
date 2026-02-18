@@ -1,19 +1,24 @@
 import { Router } from "express";
-import {insertAttendanceForAllEmployees,
-  getAttendance,
+import {
   checkIn,
   checkOut,
+  getAttendanceByDate,
+  getAttendanceByDepartment,
+  getAttendanceByMonth,
+  getAllAttendanceOfMe
 } from "../../controllers/attendance.controllers/attendanceController";
 
 const attendanceRouter = Router();
 
-
-attendanceRouter.post('/attendance/insert-all', insertAttendanceForAllEmployees);
-
-attendanceRouter.get("/attendance/", getAttendance);
-
 attendanceRouter.post("/attendance/checkin", checkIn);
 
-attendanceRouter.post("/attendance/checkout", checkOut);
+attendanceRouter.patch("/attendance/checkout/:id", checkOut);
 
+attendanceRouter.get("/attendance/byDate", getAttendanceByDate);
+
+attendanceRouter.get("/attendance/byDepartment/:departmentId", getAttendanceByDepartment);
+
+attendanceRouter.get("/attendance/byMonth/:employeeId", getAttendanceByMonth);
+
+attendanceRouter.get("/attendance/me", getAllAttendanceOfMe);
 export default attendanceRouter;

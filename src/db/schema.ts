@@ -1,5 +1,6 @@
 import { integer, uuid, varchar, pgTable, serial, date, time, text, timestamp, pgEnum, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
 
+
 export const rolesEnum = pgEnum('role', ['admin', 'manager', 'employee']);
 export const users = pgTable('users', {
     userId: uuid("user_id").primaryKey(),
@@ -74,7 +75,7 @@ export const attendance = pgTable('attendance', {
         .references(() => employees.employeeId, { onDelete: 'cascade' })
         .notNull(),
     attendanceDate: date('attendance_date').notNull(),
-    checkInTime: time('check_in_time'),
+    checkInTime: time('check_in_time').notNull(),
     checkOutTime: time('check_out_time'),
     status: attendanceStatusEnum('status').notNull(),
     source: varchar("source", { length: 20 }),
@@ -83,6 +84,9 @@ export const attendance = pgTable('attendance', {
         employeeDateIdx: uniqueIndex('attendance_emp_date_idx')
             .on(table.employeeId, table.attendanceDate),
         statusIdx: index('attendance_status_idx').on(table.status),
+        employeeIdx: index('attendance_employee_idx').on(table.employeeId),
+        dateIdx: index('attendance_date_idx').on(table.attendanceDate)
+
     })
 );
 

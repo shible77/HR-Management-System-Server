@@ -96,7 +96,7 @@ export const getUser = async (req: SessionRequest, res: Response) => {
 
 export const getUsers = async (req: SessionRequest, res: Response) => {
   try {
-   const { departmentId, designation, hireDate, status, role, limit, cursor } = validate(getUsersSchema, {...req.query, limit: req.params.limit, cursor: req.params.cursor || undefined});
+   const { departmentId, designation, hireDate, status, role, limit, cursor } = validate(getUsersSchema, {...req.query});
     const filter: UserFilter = { departmentId, designation, hireDate, status, role };
     let query = db
       .select({ userId: users.userId })

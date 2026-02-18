@@ -58,8 +58,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
 export const verifyToken = async (req: Request, res: Response) => {
     try{
-        const { token } = validate(verifyTokenSchema, req.body);
-        const tokenId  = z.coerce.number().parse(req.params.id);
+        const {tokenId, token } = validate(verifyTokenSchema, {...req.body, tokenId:req.params.id});
         const tokenInfo = await db
             .select()
             .from(passwordResetTokens)

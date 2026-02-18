@@ -38,3 +38,7 @@ export type UserFilter = {
     departmentId? : number;
   }
   
+  export enum AttendanceStatus {
+    PRESENT = "Present",
+    LEAVE = "Leave",
+  }

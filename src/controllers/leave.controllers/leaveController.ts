@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { db } from "../../db/setup";
-import { leaveApplications, users, employees, departments } from "../../db/schema";
+import { leaveApplications, users, employees, departments, attendance, applicationStatus } from "../../db/schema";
 import { eq, and, sql, gte, lte, gt, asc } from "drizzle-orm";
 import { SessionRequest } from "../../middlewares/verifySession";
 import { getDateDiff } from "../../utils/getDateDiff";
@@ -9,7 +9,8 @@ import { LeaveFilter, ApplicationStatus } from "../../types/types";
 import { applyLeaveFilters } from "../../utils/leaveFilters";
 import { validate } from "../../utils/validate";
 import { leaveReqBody, leaveFilterSchema, updateLeaveSchema, processLeaveSchema, getOnLeaveSchema, deleteLeaveSchema } from "../../validators/leave.schema";
-
+import { AttendanceStatus } from "../../types/types";
+import { getDateRange } from "../../utils/getDateRange";
 export const applyLeave = async (req: SessionRequest, res: Response) => {
   try {
     const { leaveTypes, startDate, endDate, reason } = validate(leaveReqBody, req.body);
@@ -122,19 +123,66 @@ export const processLeaveRequest = async (req: SessionRequest, res: Response) =>
   try {
     const { status, leaveId } = validate(processLeaveSchema, { status: req.query.status, leaveId: req.params.id });
     const currentUser = req.userID!;
+    if (status === ApplicationStatus.REJECTED) {
+      const application = await db
+        .update(leaveApplications)
+        .set({ status, approvedBy: currentUser })
+        .where(and(eq(leaveApplications.leaveId, leaveId), eq(leaveApplications.status, ApplicationStatus.PENDING)))
+        .execute();
+      if (application.rowCount === 0) {
+        return res.status(404).json({ message: "Leave application not found or already processed" });
+      }
+      return res.status(200).json({
+        status: true,
+        message: "Leave Application Processed Successfully"
+      });
+    } else {
+      await db.transaction(async (tx) => {
+        const leave = await tx
+          .select()
+          .from(leaveApplications)
+          .where(eq(leaveApplications.leaveId, leaveId))
+          .for("update");
 
-    const application = await db
-      .update(leaveApplications)
-      .set({ status, approvedBy: currentUser })
-      .where(and(eq(leaveApplications.leaveId, leaveId), eq(leaveApplications.status, ApplicationStatus.PENDING)))
-      .execute();
-    if (application.rowCount === 0) {
-      return res.status(404).json({ message: "Leave application not found or already processed" });
+        if (leave.length === 0) {
+          throw new Error("Leave not found");
+        }
+
+        if (leave[0].status !== ApplicationStatus.PENDING) {
+          throw new Error("Leave already processed");
+        }
+
+        await tx.update(leaveApplications)
+          .set({
+            status: ApplicationStatus.APPROVED,
+            approvedBy: currentUser,
+          })
+          .where(eq(leaveApplications.leaveId, leaveId))
+          .execute();
+
+        const dates : Date[] = getDateRange(leave[0].startDate, leave[0].endDate);
+
+        for (const date of dates) {
+          await tx
+            .insert(attendance)
+            .values({
+              employeeId: leave[0].employeeId,
+              attendanceDate: date.toISOString().split("T")[0],
+              checkInTime: "00:00:00",
+              status: AttendanceStatus.LEAVE,
+              source: "SYSTEM",
+            })
+            .onConflictDoUpdate({
+              target: [attendance.employeeId, attendance.attendanceDate],
+              set: {
+                status: AttendanceStatus.LEAVE,
+                source: "SYSTEM",
+              },
+            })
+            .execute();
+        }
+      });
     }
-    return res.status(200).json({
-      status: true,
-      message: "Leave Application Processed Successfully"
-    });
   } catch (error) {
     throw error;
   }

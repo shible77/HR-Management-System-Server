@@ -44,26 +44,25 @@ export const assignManager = async (req: SessionRequest, res: Response) => {
         .status(403)
         .json({ message: "You do not have permission to perform this" });
     }
-    const departmentId = z.coerce.number().parse(req.params.id);
-    const { userId } = validate(assignManagerReqBody, req.body);
+    const { userId, departmentId } = validate(assignManagerReqBody, { ...req.body, departmentId: req.params.id });
     await db.transaction(async (tx) => {
       await tx
-      .update(departments)
-      .set({ managerId: userId })
-      .where(eq(departments.departmentId, departmentId));
+        .update(departments)
+        .set({ managerId: userId })
+        .where(eq(departments.departmentId, departmentId));
       await tx
-      .update(employees)
-      .set({ departmentId })
-      .where(eq(employees.userId, userId));
-    await tx
-      .update(users)
-      .set({ role: Role.MANAGER })
-      .where(
-        and(
-          ne(users.role, Role.MANAGER),
-          eq(users.userId, userId)
-        )
-      );
+        .update(employees)
+        .set({ departmentId })
+        .where(eq(employees.userId, userId));
+      await tx
+        .update(users)
+        .set({ role: Role.MANAGER })
+        .where(
+          and(
+            ne(users.role, Role.MANAGER),
+            eq(users.userId, userId)
+          )
+        );
     })
     return res.status(200).json({
       status: true,
@@ -82,8 +81,7 @@ export const assignEmployee = async (req: SessionRequest, res: Response) => {
         .status(403)
         .json({ message: "You do not have permission to perform this" });
     }
-    const employeeId = z.coerce.number().parse(req.params.id);
-    const { departmentId } = validate(assignEmployeeReqBody, req.body);;
+    const { departmentId, employeeId } = validate(assignEmployeeReqBody, { ...req.body, employeeId: req.params.id });;
     await db.update(employees).set({ departmentId }).where(eq(employees.employeeId, employeeId)).execute();
     return res.status(200).json({ status: true, message: "Employee assigned successfully" });
   } catch (error) {
