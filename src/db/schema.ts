@@ -90,6 +90,18 @@ export const attendance = pgTable('attendance', {
     })
 );
 
+export const calendar = pgTable("calendar", {
+  dateId: serial("date_id").primaryKey(),
+  calendarDate: date("calendar_date").notNull(),
+  isWeekend: boolean("is_weekend").default(false).notNull(),
+  isHoliday: boolean("is_holiday").default(false).notNull(),
+  holidayName: text("holiday_name"),
+},
+  (table) => ({
+    dateIdx: index("calendar_date_idx").on(table.calendarDate),
+  })
+);
+
 
 export const leaveTypes = pgEnum('leave_types', ['casual', 'medical', 'annual'])
 export const applicationStatus = pgEnum('application_status', ['pending', 'approved', 'rejected'])
