@@ -1,4 +1,5 @@
 export interface EmployeeBatch {
+  userId: string,
   employeeId: number;
   baseSalary: string | null;
 }

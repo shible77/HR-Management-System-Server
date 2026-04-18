@@ -5,7 +5,7 @@ import { payroll } from "../../db/schema";
 
 import {
   getEmployeeBatch,
-  getAttendanceSummary,
+  getAttendanceSummaryBatch,
   getWorkingDays,
 } from "./payroll.query";
 
@@ -28,74 +28,86 @@ new Worker(
       console.log("Payroll already running");
       return;
     }
-
-    const requestedDate = new Date(payDate)
-
-    const year = requestedDate.getUTCFullYear();
-    const month = requestedDate.getUTCMonth();
-
-    const start = new Date(Date.UTC(year, month, 1));
-    const end = new Date(Date.UTC(year, month + 1, 1));
-
-    const formattedStartDate = start.toISOString().split("T")[0];
-    const formattedEndDate = end.toISOString().split("T")[0];
-    const PayMonth = new Date(Date.UTC(year, month + 1, 0));
-
-    const workingDays = await getWorkingDays(formattedStartDate, formattedEndDate);
-
-    let cursor = 0;
-    const limit = 500;
-    let processed = 0;
-
-    while (true) {
-      const employees = await getEmployeeBatch(cursor, limit);
-
-      if (employees.length === 0) break;
-
-      const payrollRows: PayrollInsert[] = [];
-
-      for (const emp of employees) {
-        const attendance = await getAttendanceSummary(
-          emp.employeeId,
-          formattedStartDate,
-          formattedEndDate
-        );
-
-        const salary = calculatePayroll(
-          Number(emp.baseSalary || 0),
-          workingDays,
-          attendance.presentDays,
-          attendance.leaveDays
-        );
-
-        payrollRows.push({
-          employeeId: emp.employeeId,
-          grossSalary: salary.grossSalary,
-          netSalary: salary.netSalary,
-          payMonth: PayMonth.toISOString().split("T")[0],
-        });
+    try {
+      const requestedDate = new Date(payDate);
+      if (Number.isNaN(requestedDate.getTime())) {
+        throw new Error(`Invalid payDate "${payDate}"`);
       }
 
-      await db
-        .insert(payroll)
-        .values(payrollRows)
-        .onConflictDoUpdate({
-          target: [payroll.employeeId, payroll.payMonth],
-          set: {
-            grossSalary: sql`excluded.gross_salary`,
-            netSalary: sql`excluded.net_salary`,
-            updatedAt: new Date(),
-          },
-        });
+      const year = requestedDate.getUTCFullYear();
+      const month = requestedDate.getUTCMonth();
 
-      cursor = employees[employees.length - 1].employeeId;
+      const monthStart = new Date(Date.UTC(year, month, 1));
+      const nextMonthStart = new Date(Date.UTC(year, month + 1, 1));
 
-      processed += employees.length;
+      const formattedStartDate = monthStart.toISOString().split("T")[0];
+      const formattedEndDateExclusive = nextMonthStart.toISOString().split("T")[0];
+      const payMonth = formattedStartDate;
 
-      await job.updateProgress(processed);
+      const workingDays = await getWorkingDays(
+        formattedStartDate,
+        formattedEndDateExclusive
+      );
+
+      let cursor: string | null = null;
+      const limit = 500;
+      let processed = 0;
+
+      while (true) {
+        const employees = await getEmployeeBatch(cursor, limit);
+
+        if (employees.length === 0) break;
+
+        const attendanceSummaryByEmployee = await getAttendanceSummaryBatch(
+          employees.map((emp) => emp.employeeId),
+          formattedStartDate,
+          formattedEndDateExclusive
+        );
+
+        const payrollRows: PayrollInsert[] = [];
+
+        for (const emp of employees) {
+          const attendance = attendanceSummaryByEmployee.get(emp.employeeId) ?? {
+            presentDays: 0,
+            leaveDays: 0,
+          };
+
+          const salary = calculatePayroll(
+            Number(emp.baseSalary || 0),
+            workingDays,
+            attendance.presentDays,
+            attendance.leaveDays
+          );
+
+          payrollRows.push({
+            employeeId: emp.employeeId,
+            grossSalary: salary.grossSalary,
+            netSalary: salary.netSalary,
+            payMonth,
+          });
+        }
+
+        await db
+          .insert(payroll)
+          .values(payrollRows)
+          .onConflictDoUpdate({
+            target: [payroll.employeeId, payroll.payMonth],
+            set: {
+              grossSalary: sql`excluded.gross_salary`,
+              netSalary: sql`excluded.net_salary`,
+              updatedAt: new Date(),
+            },
+          });
+
+        cursor = employees[employees.length - 1].userId;
+        processed += employees.length;
+        await job.updateProgress(processed);
+      }
+
+      console.log("Payroll completed");
+    } finally {
+      await redis.del(lockKey);
     }
-
-    console.log("Payroll completed");
   },
   {
     connection: redisConnection,
