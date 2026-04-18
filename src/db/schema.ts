@@ -1,4 +1,4 @@
-import { integer, uuid, varchar, pgTable, serial, date, time, text, timestamp, pgEnum, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { integer, uuid, varchar, pgTable, serial, date, time, text, timestamp, pgEnum, boolean, index, uniqueIndex, decimal } from 'drizzle-orm/pg-core';
 
 
 export const rolesEnum = pgEnum('role', ['admin', 'manager', 'employee']);
@@ -30,6 +30,7 @@ export const employees = pgTable('employees', {
         .notNull(),
     departmentId: integer('department_id')
         .references(() => departments.departmentId, { onDelete: 'set null' }),
+    baseSalary: decimal('base_salary', { precision: 10, scale: 2 }),
 },
     (table) => ({
         userIdx: uniqueIndex('employees_user_id_idx').on(table.userId),
@@ -137,12 +138,11 @@ export const payroll = pgTable('payroll', {
     employeeId: integer('employee_id')
         .references(() => employees.employeeId, { onDelete: 'cascade' })
         .notNull(),
-    baseSalary: integer('base_salary').notNull(),
-    bonus: integer('bonus').default(0),
-    deductions: integer('deductions').default(0),
-    netSalary: integer('net_salary').notNull(),
+    grossSalary: decimal('gross_salary', { precision: 10, scale: 2 }).notNull(),
+    netSalary: decimal('net_salary', { precision: 10, scale: 2 }).notNull(),
     payMonth: date('pay_month').notNull(), // e.g. 2025-01-01
     paidAt: timestamp('paid_at').defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
 },
     (table) => ({
         empMonthIdx: uniqueIndex('payroll_emp_month_idx')

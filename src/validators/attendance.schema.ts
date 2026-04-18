@@ -1,3 +1,4 @@
+import { year } from 'drizzle-orm/mysql-core';
 import { z } from 'zod';
 
 export const checkOutSchema = z.object({
@@ -30,3 +31,19 @@ export const getAllAttendanceOfMeSchema = z.object({
 export const getAbsentEmployeeByMonthSchema = z.object({
     date: z.string().optional().openapi({example: "2016-06-23"}),
 }).openapi({description: "get all the absent employee by month"})
+
+export const getPerEmployeeAttendanceReportForAdminSchema = z.object({
+    month: z.string().optional().openapi({example: "1"}),
+    year: z.string().optional().openapi({example: "2024"}),
+    cursor: z.string().optional().openapi({example: "wetwe6-hsjs8-6s7d8"}),
+    limit: z.coerce.number().optional().default(10).openapi({example: 10}),
+}).openapi({description: "get monthly or yearly attendance report for admin. provide month and year for monthly report, provide only year for yearly report"});
+
+export const getAttendanceReportPerDepartmentByMonthSchema = z.object({
+    date: z.string().optional().openapi({example: "2024-06-01"}).openapi({example: "2024-06-01", description: "Provide any date of the month for which you want the report. If not provided, current month will be considered."}),
+}).openapi({description: "get monthly attendance report per department. Can be use for showing department-wise attendance summary in dashboard"});
+
+export const getAttendanceReportPerEmployeeByMonthSchema = z.object({
+    date: z.string().optional().openapi({example: "2024-06-01"}).openapi({example: "2024-06-01", description: "Provide any date of the month for which you want the report. If not provided, current month will be considered."}),
+    employeeId: z.coerce.number().openapi({example: 12445}),
+}).openapi({description: "get monthly attendance report per employee. Can be use for showing employee-wise attendance summary in dashboard"});
