@@ -1,8 +1,10 @@
 import swaggerUi from "swagger-ui-express";
 import { OpenApiGeneratorV3 } from "@asteasolutions/zod-to-openapi";
 import { registry } from "./registry";
+import { registerAllOpenApiPaths } from "./openapiPaths";
 
 export function setupSwagger(app: any) {
+  registerAllOpenApiPaths();
   const generator = new OpenApiGeneratorV3(registry.definitions);
 
   const openApiDoc = generator.generateDocument({
@@ -13,6 +15,16 @@ export function setupSwagger(app: any) {
       version: "1.0.0",
     },
     servers: [{ url: "http://localhost:5000" }],
+    tags: [
+      { name: "Auth", description: "Login, registration, and password reset" },
+      { name: "Users", description: "Current user and directory lookups" },
+      { name: "Department", description: "Departments, managers, and assignments" },
+      { name: "Attendance", description: "Check-in/out and attendance reports" },
+      { name: "Leave", description: "Leave applications and processing" },
+      { name: "Dashboard", description: "Aggregated stats for admin and manager" },
+      { name: "Calendar", description: "Working-day calendar generation" },
+      { name: "Payroll", description: "Queued payroll runs (BullMQ + Redis)" },
+    ],
   });
 
   openApiDoc.components = {

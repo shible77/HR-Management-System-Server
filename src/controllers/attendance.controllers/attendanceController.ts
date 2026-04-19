@@ -4,7 +4,6 @@ import {
   departments,
   employees,
   users,
-  calendar,
 } from "../../db/schema";
 import { eq, and, gt, gte, lt, isNull } from "drizzle-orm/expressions";
 import { Response } from "express";
@@ -16,10 +15,9 @@ import {
   getAttendanceByDepartmentSchema,
   getAttendanceByMonthSchema,
   getAllAttendanceOfMeSchema,
-  getAbsentEmployeeByMonthSchema,
-  getPerEmployeeAttendanceReportForAdminSchema
+  getAbsentEmployeeByMonthSchema
 } from "../../validators/attendance.schema";
-import { sql } from "drizzle-orm";
+
 
 export const checkIn = async (req: SessionRequest, res: Response) => {
   try {
@@ -113,14 +111,12 @@ export const getAttendanceByDate = async (
     const sliced = hasMore ? records.slice(0, -1) : records;
     const nextCursor = hasMore ? sliced[sliced.length - 1].attendanceId : null;
 
-    return res
-      .status(200)
-      .json({
-        status: true,
-        message: "Attendance records fetched successfully",
-        data: sliced,
-        pageInfo: { nextCursor, hasMore },
-      });
+    return res.status(200).json({
+      status: true,
+      message: "Attendance records fetched successfully",
+      data: sliced,
+      pageInfo: { nextCursor, hasMore },
+    });
   } catch (error) {
     throw error;
   }
@@ -169,20 +165,18 @@ export const getAttendanceByDepartment = async (
     const hasMore: boolean = records.length > limit;
     const sliced = hasMore ? records.slice(0, -1) : records;
     const nextCursor = hasMore ? sliced[sliced.length - 1].attendanceId : null;
-    return res
-      .status(200)
-      .json({
-        status: true,
-        message: "Attendance records fetched successfully",
-        data: sliced,
-        pageInfo: { nextCursor, hasMore },
-      });
+    return res.status(200).json({
+      status: true,
+      message: "Attendance records fetched successfully",
+      data: sliced,
+      pageInfo: { nextCursor, hasMore },
+    });
   } catch (error) {
     throw error;
   }
 };
 
-export const getAttendanceByMonth = async (
+export const getAttendanceByMonthPerEmployee = async (
   req: SessionRequest,
   res: Response,
 ) => {
@@ -219,13 +213,11 @@ export const getAttendanceByMonth = async (
       )
       .orderBy(attendance.attendanceDate);
 
-    return res
-      .status(200)
-      .json({
-        status: true,
-        message: "Attendance records fetched successfully",
-        data: records,
-      });
+    return res.status(200).json({
+      status: true,
+      message: "Attendance records fetched successfully",
+      data: records,
+    });
   } catch (error) {
     throw error;
   }
@@ -261,20 +253,18 @@ export const getAllAttendanceOfMe = async (
     const hasMore: boolean = records.length > limit;
     const sliced = hasMore ? records.slice(0, -1) : records;
     const nextCursor = hasMore ? sliced[sliced.length - 1].attendanceId : null;
-    return res
-      .status(200)
-      .json({
-        status: true,
-        message: "Attendance records fetched successfully",
-        data: sliced,
-        pageInfo: { nextCursor, hasMore },
-      });
+    return res.status(200).json({
+      status: true,
+      message: "Attendance records fetched successfully",
+      data: sliced,
+      pageInfo: { nextCursor, hasMore },
+    });
   } catch (error) {
     throw error;
   }
 };
 
-export const getAbsentEmployeeByMonth = async (
+export const getAbsentEmployeeByDate = async (
   req: SessionRequest,
   res: Response,
 ) => {
@@ -306,15 +296,12 @@ export const getAbsentEmployeeByMonth = async (
       .orderBy(departments.departmentName)
       .execute();
 
-    return res
-      .status(200)
-      .json({
-        status: 200,
-        message: "data fetched successfully",
-        data: record,
-      });
+    return res.status(200).json({
+      status: 200,
+      message: "data fetched successfully",
+      data: record,
+    });
   } catch (error) {
     throw error;
   }
 };
-

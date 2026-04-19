@@ -4,21 +4,39 @@ import {
   checkOut,
   getAttendanceByDate,
   getAttendanceByDepartment,
-  getAttendanceByMonth,
-  getAllAttendanceOfMe
+  getAttendanceByMonthPerEmployee,
+  getAllAttendanceOfMe,
+  getAbsentEmployeeByDate
 } from "../../controllers/attendance.controllers/attendanceController";
+
+import { 
+  getPerEmployeeAttendanceReportForAdmin, 
+  getAttendanceReportPerDepartmentByMonth,
+  getAttendanceReportPerEmployeeByMonth
+ } from "../../controllers/attendance.controllers/attendanceReportController";
+import { verifySession } from "../../middlewares/verifySession";
+import { checkPermission, Role } from "../../middlewares/checkPermission";
 
 const attendanceRouter = Router();
 
-attendanceRouter.post("/attendance/checkin", checkIn);
+attendanceRouter.post("/attendance/checkin",verifySession, checkIn);
 
-attendanceRouter.patch("/attendance/checkout/:id", checkOut);
+attendanceRouter.patch("/attendance/checkout/:id",verifySession, checkOut);
 
-attendanceRouter.get("/attendance/byDate", getAttendanceByDate);
+attendanceRouter.get("/attendance/byDate", verifySession, getAttendanceByDate);
 
-attendanceRouter.get("/attendance/byDepartment/:departmentId", getAttendanceByDepartment);
+attendanceRouter.get("/attendance/byDepartment/:departmentId", verifySession, getAttendanceByDepartment);
 
-attendanceRouter.get("/attendance/byMonth/:employeeId", getAttendanceByMonth);
+attendanceRouter.get("/attendance/byMonth/:employeeId", verifySession ,getAttendanceByMonthPerEmployee);
 
-attendanceRouter.get("/attendance/me", getAllAttendanceOfMe);
+attendanceRouter.get("/attendance/me", verifySession ,getAllAttendanceOfMe);
+
+attendanceRouter.get("/attendance/absent/byDate", verifySession,getAbsentEmployeeByDate)
+
+attendanceRouter.get("/attendance/report/perEmployee/admin", verifySession, checkPermission([Role.ADMIN]), getPerEmployeeAttendanceReportForAdmin);
+
+attendanceRouter.get("/attendance/report/perDepartment/byMonth", verifySession, getAttendanceReportPerDepartmentByMonth);
+
+attendanceRouter.get("/attendance/report/perEmployee/byMonth", verifySession, getAttendanceReportPerEmployeeByMonth);
+
 export default attendanceRouter;
