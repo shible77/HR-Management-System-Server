@@ -1,26 +1,28 @@
 import IORedis from "ioredis";
 
-interface RedisConnectionConfig {
-  host: string;
-  port: number;
-  maxRetriesPerRequest: null;
-  enableReadyCheck: boolean;
-  lazyConnect: boolean;
-  reconnectOnError(err: Error): boolean;
-}
-
-export const redisConnection: RedisConnectionConfig = {
+export const bullMQConnectionOptions = {
   host: process.env.REDIS_HOST || "127.0.0.1",
-    port: Number(process.env.REDIS_PORT) || 6379,
-
-    maxRetriesPerRequest: null,
-    enableReadyCheck: true,
-    lazyConnect: true,
-    reconnectOnError(err: Error): boolean {
-    console.error("Redis reconnecting:", err.message);
+  port: Number(process.env.REDIS_PORT) || 6379,
+  maxRetriesPerRequest: null as null,
+  enableReadyCheck: false,
+  lazyConnect: true,
+  reconnectOnError(err: Error): boolean {
+    console.error("[Redis] reconnecting after error:", err.message);
     return true;
   },
 };
 
 
-export const redis: IORedis = new IORedis(redisConnection);
+export const redis = new IORedis({
+  host: process.env.REDIS_HOST || "127.0.0.1",
+  port: Number(process.env.REDIS_PORT) || 6379,
+  maxRetriesPerRequest: 3,
+  enableReadyCheck: false,
+  lazyConnect: true,
+  reconnectOnError(err: Error): boolean {
+    console.error("[Redis lock client] reconnecting:", err.message);
+    return true;
+  },
+});
+
+export const redisConnection = bullMQConnectionOptions;

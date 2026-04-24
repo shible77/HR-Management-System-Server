@@ -5,7 +5,6 @@ import { checkPermission } from '../middlewares/checkPermission'
 import { Role } from '../middlewares/checkPermission'
 
 const createUserRouter = express.Router()
-
 createUserRouter.post('/createUser', verifySession, checkPermission([Role.ADMIN]), createUser)
 
 export default createUserRouter

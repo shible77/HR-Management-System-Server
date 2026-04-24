@@ -8,47 +8,55 @@ import { SessionRequest } from "../../middlewares/verifySession";
 const crypto = require("crypto");
 import { createUserBody } from "../../validators/auth.schema";
 import { validate } from "../../utils/validate";
-
+import * as argon2 from "argon2";
 export const createUser = async (req: SessionRequest, res: Response) => {
   try {
-    if (req.role !== Role.ADMIN) {
-      return res
-        .status(403)
-        .json({ message: "You do not have permission to perform this" });
-    }
     const { firstName, lastName, phone, username, email, password, role } = validate(createUserBody, req.body);
-    const userId = uuidv7();
-    const user = await db
-      .insert(users)
-      .values({
-        userId: userId,
-        firstName,
-        lastName,
-        phone,
-        username,
-        email,
-        password,
-        role,
-      })
-      .returning({ userId: users.userId })
-      .execute();
-    const employee = await db
-      .insert(employees)
-      .values({
-        employeeId: crypto.randomInt(10000000, 100000000),
-        userId: user[0].userId,
-      })
-      .returning({ employeeId: employees.employeeId })
-      .execute();
+    const hashed_password = await argon2.hash(password);
+    const user= await db.transaction(async (trx) => {
+      const userId = uuidv7();
+      const user = await trx
+        .insert(users)
+        .values({
+          userId: userId,
+          firstName,
+          lastName,
+          phone,
+          username,
+          email,
+          password: hashed_password,
+          role,
+        })
+        .returning({ userId: users.userId })
+        .execute();
+      const employee = await trx
+        .insert(employees)
+        .values({
+          employeeId: crypto.randomInt(10000000, 100000000),
+          userId: user[0].userId,
+        })
+        .returning({ employeeId: employees.employeeId })
+        .execute();
+
+        return {...user[0], ...employee[0]};
+    })
+
+    if(!user){
+      return res.status(500)
+      .json({
+        status: false,
+        message: "Failed to create user",
+      });
+    }
 
     return res
       .status(201)
       .json({
         status: true,
         message: "User created successfully",
-        data: { userId: user[0].userId, employeeId: employee[0].employeeId },
+        data: { userId: user.userId, employeeId: user.employeeId },
       });
-  } catch(error){
-    throw error; 
+  } catch (error) {
+    throw error;
   }
 };

@@ -1,6 +1,89 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HR Management System — full stack
+#
+# Services
+# ────────
+#  redis    — message broker / distributed lock store for BullMQ
+#  api      — Express HTTP server  (src/index.ts)
+#  worker   — BullMQ payroll worker (src/controllers/payroll.controllers/payroll.worker.ts)
+#
+# Usage
+# ─────
+#   Development:
+#     docker compose up
+#
+#   Production (detached, always restart):
+#     docker compose -f docker-compose.yml up -d
+#
+#   View logs:
+#     docker compose logs -f api
+#     docker compose logs -f worker
+#
+#   Stop everything:
+#     docker compose down
+# ─────────────────────────────────────────────────────────────────────────────
+
 services:
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     restart: unless-stopped
+    ports:
+      - "6379:6379"           # expose only if you need external access; remove in prod
+    volumes:
+      - redis_data:/data      # persist queue state across restarts
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── API Server ─────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner            # see Dockerfile below
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5000}:5000"
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DB_URL: ${DB_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      CLIENT_URL: ${CLIENT_URL}
+      EMAIL: ${EMAIL}
+      PASSWORD: ${PASSWORD}
+      REDIS_HOST: redis         # service name — Docker DNS resolves this
+      REDIS_PORT: 6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["node", "dist/index.js"]
+
+  # ── Payroll Worker ─────────────────────────────────────────────────────────
+  # Runs the BullMQ worker in a completely separate process.
+  # Scale horizontally with: docker compose up --scale worker=3
+  # (concurrency inside each worker is already set to 1 for payroll safety)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DB_URL: ${DB_URL}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["node", "dist/controllers/payroll.controllers/payroll.worker.js"]
+
+volumes:
+  redis_data:

@@ -97,11 +97,9 @@ export const calendar = pgTable("calendar", {
   isWeekend: boolean("is_weekend").default(false).notNull(),
   isHoliday: boolean("is_holiday").default(false).notNull(),
   holidayName: text("holiday_name"),
-},
-  (table) => ({
-    dateIdx: index("calendar_date_idx").on(table.calendarDate),
-  })
-);
+}, (table) => ({
+  dateUnique: uniqueIndex("calendar_date_unique").on(table.calendarDate),
+}));
 
 
 export const leaveTypes = pgEnum('leave_types', ['casual', 'medical', 'annual'])

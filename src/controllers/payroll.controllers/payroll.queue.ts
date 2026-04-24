@@ -1,12 +1,12 @@
 import { Queue } from "bullmq";
-import { redisConnection } from "../../config/redis";
+import { bullMQConnectionOptions } from "../../config/redis";
 
 let payrollQueue: Queue | null = null;
 
 export function getPayrollQueue(): Queue {
   if (!payrollQueue) {
     payrollQueue = new Queue("payroll", {
-      connection: redisConnection,
+      connection: bullMQConnectionOptions,
       defaultJobOptions: {
         attempts: 5,
         backoff: {
