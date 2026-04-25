@@ -1,0 +1,86 @@
+# render.yaml — Render Infrastructure-as-Code (Blueprint)
+#
+# Defines all three services in one file so Render can create and wire
+# them together automatically.
+#
+# How to use
+# ──────────
+# 1. Push this file to the root of your GitHub repository.
+# 2. In the Render dashboard → "Blueprints" → "New Blueprint Instance".
+# 3. Connect your repo. Render reads this file and creates all services.
+# 4. Set the secret environment variables marked `sync: false` in the
+#    Render dashboard under each service's "Environment" tab.
+#
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+
+  # ── Redis ────────────────────────────────────────────────────────────────
+  - type: redis
+    name: hrms-redis
+    plan: free          # 25 MB — enough for BullMQ queues; upgrade for production
+    maxmemoryPolicy: noeviction   # never silently drop queued jobs
+    ipAllowList: []     # empty = only Render internal network can connect (secure)
+
+  # ── API Server (Web Service) ─────────────────────────────────────────────
+  - type: web
+    name: hrms-api
+    runtime: node
+    plan: free          # change to "starter" or higher for always-on
+    region: singapore   # pick the region closest to your Neon DB
+    branch: main        # deploy from this git branch
+
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+
+    healthCheckPath: /docs          # Render pings this; 200 = healthy
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Render injects REDIS_URL automatically because of the fromService block
+      - key: REDIS_URL
+        fromService:
+          name: hrms-redis
+          type: redis
+          property: connectionString
+
+      # Secret values — set these in the Render dashboard, not here
+      - key: DB_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+      - key: EMAIL
+        sync: false
+      - key: PASSWORD
+        sync: false
+
+  # ── Payroll Worker (Background Worker) ───────────────────────────────────
+  # A Background Worker has no public URL, never sleeps, and is billed
+  # only for CPU/RAM — not requests.  This is exactly what BullMQ needs.
+  - type: worker
+    name: hrms-payroll-worker
+    runtime: node
+    plan: free          # change to "starter" for production (free workers sleep)
+    region: singapore   # must match the API region so Redis latency is minimal
+    branch: main
+
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start:worker
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: REDIS_URL
+        fromService:
+          name: hrms-redis
+          type: redis
+          property: connectionString
+
+      # Worker only needs DB + Redis — no JWT/email/CORS needed
+      - key: DB_URL
+        sync: false

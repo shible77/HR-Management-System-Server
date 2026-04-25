@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "nodemon src/index.ts",
     "build": "tsc",
+    "start": "node dist/index.js",
+    "start:worker": "node dist/controllers/payroll.controllers/payroll.worker.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push"

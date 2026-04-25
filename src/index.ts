@@ -8,10 +8,12 @@ const port = process.env.PORT || 5000;
 import { setupSwagger } from "./docs/swagger";
 import { errorHandler } from "./middlewares/error.middleware";
 
+const allowedOrigin = process.env.CLIENT_URL || "http://localhost:5173";
+
 app.use(
   cors({
-    origin: "http://localhost:5173", // Front-end URL
-    credentials: true, // Allow sending cookies
+    origin: allowedOrigin,
+    credentials: true,
   }),
 );
 app.use(express.json());
