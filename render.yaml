@@ -12,6 +12,10 @@
 #    Render dashboard under each service's "Environment" tab.
 #
 # Docs: https://render.com/docs/blueprint-spec
+#
+# NOTE: `branch` is intentionally omitted from all services.
+# Render will automatically use your repository's default branch
+# (whether it is called "main", "master", or anything else).
 
 services:
 
@@ -28,7 +32,6 @@ services:
     runtime: node
     plan: free          # change to "starter" or higher for always-on
     region: singapore   # pick the region closest to your Neon DB
-    branch: main        # deploy from this git branch
 
     buildCommand: npm ci && npm run build
     startCommand: npm run start
@@ -66,7 +69,6 @@ services:
     runtime: node
     plan: free          # change to "starter" for production (free workers sleep)
     region: singapore   # must match the API region so Redis latency is minimal
-    branch: main
 
     buildCommand: npm ci && npm run build
     startCommand: npm run start:worker
